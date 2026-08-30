@@ -58,12 +58,48 @@ function readLegacyWorkspace(legacyPaths, fileSystem) {
   return null;
 }
 
+function insertSteps(item, insertStep) {
+  const steps = Array.isArray(item.steps) ? item.steps : [];
+  for (const [stepIndex, step] of steps.entries()) {
+    insertStep.run(step.id, item.id, step.text, Number(Boolean(step.completed)), stepIndex);
+  }
+}
+
+function insertItems(list, insertItem, insertStep) {
+  for (const [itemIndex, item] of list.items.entries()) {
+    insertItem.run(
+      item.id,
+      list.id,
+      item.text,
+      Number(Boolean(item.completed)),
+      typeof item.details === 'string' ? item.details : '',
+      itemIndex,
+    );
+    insertSteps(item, insertStep);
+  }
+}
+
+function insertLists(topic, insertList, insertItem, insertStep) {
+  for (const [listIndex, list] of topic.lists.entries()) {
+    insertList.run(list.id, topic.id, list.title, listIndex);
+    insertItems(list, insertItem, insertStep);
+  }
+}
+
+function insertTopics(topics, insertTopic, insertList, insertItem, insertStep) {
+  for (const [topicIndex, topic] of topics.entries()) {
+    insertTopic.run(topic.id, topic.title, topicIndex);
+    insertLists(topic, insertList, insertItem, insertStep);
+  }
+}
+
 function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs }) {
   const database = new DatabaseSync(databasePath);
   database.exec(SCHEMA);
 
   function getMetadata(key) {
-    return database.prepare('SELECT value FROM metadata WHERE key = ?').get(key)?.value;
+    const value = database.prepare('SELECT value FROM metadata WHERE key = ?').get(key)?.value;
+    return String(value ?? '');
   }
 
   function loadWorkspace() {
@@ -136,26 +172,7 @@ function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs 
     database.exec('BEGIN IMMEDIATE');
     try {
       database.exec('DELETE FROM topics');
-      for (const [topicIndex, topic] of workspace.topics.entries()) {
-        insertTopic.run(topic.id, topic.title, topicIndex);
-        for (const [listIndex, list] of topic.lists.entries()) {
-          insertList.run(list.id, topic.id, list.title, listIndex);
-          for (const [itemIndex, item] of list.items.entries()) {
-            insertItem.run(
-              item.id,
-              list.id,
-              item.text,
-              Number(Boolean(item.completed)),
-              typeof item.details === 'string' ? item.details : '',
-              itemIndex,
-            );
-            const steps = Array.isArray(item.steps) ? item.steps : [];
-            for (const [stepIndex, step] of steps.entries()) {
-              insertStep.run(step.id, item.id, step.text, Number(Boolean(step.completed)), stepIndex);
-            }
-          }
-        }
-      }
+      insertTopics(workspace.topics, insertTopic, insertList, insertItem, insertStep);
       insertMetadata.run('workspace_version', '3');
       insertMetadata.run('active_topic_id', workspace.activeTopicId || '');
       database.exec('COMMIT');
