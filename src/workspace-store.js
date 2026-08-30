@@ -1,0 +1,175 @@
+const fs = require('node:fs');
+const { DatabaseSync } = require('node:sqlite');
+
+const SCHEMA = `
+  PRAGMA foreign_keys = ON;
+  PRAGMA journal_mode = WAL;
+
+  CREATE TABLE IF NOT EXISTS metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS topics (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    sort_order INTEGER NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS lists (
+    id TEXT PRIMARY KEY,
+    topic_id TEXT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    sort_order INTEGER NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS items (
+    id TEXT PRIMARY KEY,
+    list_id TEXT NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    completed INTEGER NOT NULL CHECK (completed IN (0, 1)),
+    details TEXT NOT NULL DEFAULT '',
+    sort_order INTEGER NOT NULL
+  ) STRICT;
+
+  CREATE TABLE IF NOT EXISTS task_steps (
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    completed INTEGER NOT NULL CHECK (completed IN (0, 1)),
+    sort_order INTEGER NOT NULL
+  ) STRICT;
+`;
+
+function validateWorkspace(workspace) {
+  if (!workspace || typeof workspace !== 'object' || !Array.isArray(workspace.topics)) {
+    throw new Error('Ungültige Arbeitsbereichsdaten');
+  }
+}
+
+function readLegacyWorkspace(legacyPaths, fileSystem) {
+  for (const legacyPath of legacyPaths) {
+    try {
+      return JSON.parse(fileSystem.readFileSync(legacyPath, 'utf8'));
+    } catch {
+      // Try the next legacy location. Original files remain untouched as backups.
+    }
+  }
+  return null;
+}
+
+function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs }) {
+  const database = new DatabaseSync(databasePath);
+  database.exec(SCHEMA);
+
+  function getMetadata(key) {
+    return database.prepare('SELECT value FROM metadata WHERE key = ?').get(key)?.value;
+  }
+
+  function loadWorkspace() {
+    if (!getMetadata('workspace_version')) {
+      return readLegacyWorkspace(legacyPaths, fileSystem);
+    }
+
+    const topics = database.prepare('SELECT id, title FROM topics ORDER BY sort_order').all()
+      .map((topic) => ({ ...topic, lists: [] }));
+    const topicsById = new Map(topics.map((topic) => [topic.id, topic]));
+    const lists = database.prepare('SELECT id, topic_id, title FROM lists ORDER BY sort_order').all()
+      .map((list) => ({ id: list.id, title: list.title, items: [] }));
+    const listRows = database.prepare('SELECT id, topic_id FROM lists ORDER BY sort_order').all();
+    const listsById = new Map(lists.map((list) => [list.id, list]));
+    for (const [index, list] of lists.entries()) {
+      topicsById.get(listRows[index].topic_id)?.lists.push(list);
+    }
+
+    const items = database.prepare(
+      'SELECT id, list_id, text, completed, details FROM items ORDER BY sort_order',
+    ).all().map((item) => ({
+      id: item.id,
+      text: item.text,
+      completed: Boolean(item.completed),
+      details: item.details,
+      steps: [],
+    }));
+    const itemRows = database.prepare('SELECT id, list_id FROM items ORDER BY sort_order').all();
+    const itemsById = new Map(items.map((item) => [item.id, item]));
+    for (const [index, item] of items.entries()) {
+      listsById.get(itemRows[index].list_id)?.items.push(item);
+    }
+
+    const steps = database.prepare(
+      'SELECT id, item_id, text, completed FROM task_steps ORDER BY sort_order',
+    ).all();
+    for (const step of steps) {
+      itemsById.get(step.item_id)?.steps.push({
+        id: step.id,
+        text: step.text,
+        completed: Boolean(step.completed),
+      });
+    }
+
+    return {
+      version: 3,
+      activeTopicId: getMetadata('active_topic_id') || null,
+      topics,
+    };
+  }
+
+  function saveWorkspace(workspace) {
+    validateWorkspace(workspace);
+    const insertMetadata = database.prepare(
+      'INSERT INTO metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    );
+    const insertTopic = database.prepare(
+      'INSERT INTO topics (id, title, sort_order) VALUES (?, ?, ?)',
+    );
+    const insertList = database.prepare(
+      'INSERT INTO lists (id, topic_id, title, sort_order) VALUES (?, ?, ?, ?)',
+    );
+    const insertItem = database.prepare(
+      'INSERT INTO items (id, list_id, text, completed, details, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+    );
+    const insertStep = database.prepare(
+      'INSERT INTO task_steps (id, item_id, text, completed, sort_order) VALUES (?, ?, ?, ?, ?)',
+    );
+
+    database.exec('BEGIN IMMEDIATE');
+    try {
+      database.exec('DELETE FROM topics');
+      for (const [topicIndex, topic] of workspace.topics.entries()) {
+        insertTopic.run(topic.id, topic.title, topicIndex);
+        for (const [listIndex, list] of topic.lists.entries()) {
+          insertList.run(list.id, topic.id, list.title, listIndex);
+          for (const [itemIndex, item] of list.items.entries()) {
+            insertItem.run(
+              item.id,
+              list.id,
+              item.text,
+              Number(Boolean(item.completed)),
+              typeof item.details === 'string' ? item.details : '',
+              itemIndex,
+            );
+            const steps = Array.isArray(item.steps) ? item.steps : [];
+            for (const [stepIndex, step] of steps.entries()) {
+              insertStep.run(step.id, item.id, step.text, Number(Boolean(step.completed)), stepIndex);
+            }
+          }
+        }
+      }
+      insertMetadata.run('workspace_version', '3');
+      insertMetadata.run('active_topic_id', workspace.activeTopicId || '');
+      database.exec('COMMIT');
+    } catch (error) {
+      database.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
+  return {
+    loadWorkspace,
+    saveWorkspace,
+    close: () => database.close(),
+  };
+}
+
+module.exports = { createWorkspaceStore, validateWorkspace };

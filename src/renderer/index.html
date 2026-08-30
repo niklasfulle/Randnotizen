@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta id="theme-color" name="theme-color" content="#f3ead7" />
+    <title>Randnotizen</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <header class="titlebar" id="titlebar">
+        <div class="brand-block">
+          <p class="eyebrow" data-i18n="brandEyebrow">DEIN GEDANKENRAND</p>
+          <h1><span data-i18n="brandLineOne">RAND</span><br /><span data-i18n="brandLineTwo">NOTIZEN</span></h1>
+          <span class="scribble" aria-hidden="true">✦</span>
+        </div>
+        <span class="date-sticker" id="today-label"></span>
+        <button id="open-settings-button" class="settings-button" type="button" data-i18n="settings">EINSTELLUNGEN</button>
+        <button id="hide-button" class="icon-button" title="Ausblenden (Strg + Alt + N)" aria-label="Ausblenden" data-i18n-title="hideShortcut" data-i18n-aria-label="hide">×</button>
+      </header>
+
+      <section class="topics-section" aria-label="Themen" data-i18n-aria-label="topics">
+        <div class="section-title"><span data-i18n="topics">THEMEN</span><span id="topic-count"></span></div>
+        <div id="topic-tabs" class="topic-tabs"></div>
+        <form id="topic-form" class="inline-form">
+          <input id="topic-input" maxlength="50" placeholder="Neues Thema …" aria-label="Neues Thema" aria-keyshortcuts="Control+Shift+T" title="Neues Thema (Strg + Umschalt + T)" data-i18n-placeholder="newTopic" data-i18n-aria-label="newTopicAria" data-i18n-title="newTopicShortcut" />
+          <button class="square-button" type="submit" aria-label="Thema hinzufügen" data-i18n-aria-label="addTopic">+</button>
+        </form>
+      </section>
+
+      <section id="topic-overview" class="topic-overview" aria-live="polite">
+        <div class="topic-heading">
+          <div>
+            <p class="composer-label" data-i18n="currentTopic">AKTUELLES THEMA</p>
+            <h2 id="active-topic-title">Thema</h2>
+          </div>
+          <button id="delete-topic-button" class="delete-button" aria-label="Thema löschen" title="Thema löschen" data-i18n-aria-label="deleteTopic" data-i18n-title="deleteTopic">×</button>
+        </div>
+        <div class="progress-line">
+          <div class="progress-track"><span id="topic-progress-bar"></span></div>
+          <strong id="topic-progress-label">0%</strong>
+        </div>
+        <p id="topic-progress-detail" class="progress-detail"></p>
+      </section>
+
+      <section class="saved-section" aria-label="Listen im gewählten Thema" data-i18n-aria-label="listsAria">
+        <div class="section-title"><span data-i18n="lists">LISTEN</span><span id="list-count"></span></div>
+        <form id="list-form" class="inline-form list-form">
+          <input id="list-input" maxlength="70" placeholder="Neue Liste …" aria-label="Neue Liste" aria-keyshortcuts="Control+Shift+L" title="Neue Liste (Strg + Umschalt + L)" data-i18n-placeholder="newList" data-i18n-aria-label="newListAria" data-i18n-title="newListShortcut" />
+          <button class="primary" type="submit" data-i18n="addList">LISTE +</button>
+        </form>
+        <div id="lists" class="lists"></div>
+      </section>
+
+      <div id="settings-overlay" class="settings-overlay" hidden>
+        <dialog class="settings-popover" open aria-modal="true" aria-labelledby="settings-title">
+          <span class="settings-tape" aria-hidden="true"></span>
+          <header class="settings-heading">
+            <div>
+              <p class="composer-label" data-i18n="settingsEyebrow">RANDNOTIZEN KONFIGURIEREN</p>
+              <h2 id="settings-title" data-i18n="settingsTitle">Einstellungen</h2>
+            </div>
+            <button id="close-settings-button" class="delete-button" type="button" aria-label="Einstellungen schließen" data-i18n-aria-label="closeSettings">×</button>
+          </header>
+
+          <form id="settings-form">
+            <div class="settings-field-grid">
+              <label>
+                <span data-i18n="display">Bildschirm</span>
+                <select id="display-select"></select>
+              </label>
+              <label>
+                <span data-i18n="side">Seite</span>
+                <select id="side-select">
+                  <option value="left" data-i18n="left">Links</option>
+                  <option value="right" data-i18n="right">Rechts</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="design">Design</span>
+                <select id="design-select">
+                  <option value="paper" data-i18n="designPaper">Papier-Collage</option>
+                  <option value="dark" data-i18n="designDark">Nacht-Collage</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="font">Schriftart</span>
+                <select id="font-select">
+                  <option value="segoe">Segoe UI</option>
+                  <option value="arial">Arial</option>
+                  <option value="verdana">Verdana</option>
+                  <option value="georgia">Georgia</option>
+                  <option value="courier">Courier New</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="settings-toggle-grid">
+              <div>
+                <p data-i18n="language">Sprache</p>
+                <button id="language-setting" class="paper-toggle" type="button" aria-label="Sprache wechseln">
+                  <span class="active">DE</span><i>/</i><span>EN</span>
+                </button>
+              </div>
+            </div>
+
+            <label class="autostart-note">
+              <input id="autostart-checkbox" type="checkbox" />
+              <span><b data-i18n="autostart">Mit Windows starten</b><small data-i18n="autostartHint">Randnotizen startet nach der Anmeldung automatisch im Infobereich.</small></span>
+            </label>
+            <label class="autostart-note">
+              <input id="keep-visible-checkbox" type="checkbox" />
+              <span><b data-i18n="keepVisible">Bei Fokusverlust geöffnet lassen</b><small data-i18n="keepVisibleHint">Strg + Alt + N setzt den Fokus wieder auf Randnotizen.</small></span>
+            </label>
+
+            <footer class="settings-footer">
+              <div class="version-meta">
+                <p><span data-i18n="version">Version</span> <strong id="version-label">–</strong></p>
+                <p class="copyright-label" data-i18n="copyright">© 2026 Urheberrecht: Niklas Fulle</p>
+              </div>
+              <button class="primary" type="submit" data-i18n="saveSettings">EINSTELLUNGEN SPEICHERN</button>
+            </footer>
+            <output id="save-status" class="save-status" aria-live="polite"></output>
+          </form>
+        </dialog>
+      </div>
+
+      <div id="confirm-overlay" class="confirm-overlay" hidden>
+        <section class="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+          <span class="confirm-tape" aria-hidden="true"></span>
+          <p class="composer-label" data-i18n="confirmEyebrow">BIST DU SICHER?</p>
+          <h2 id="confirm-title" data-i18n="confirmTitle">Wirklich löschen?</h2>
+          <p id="confirm-message"></p>
+          <div class="confirm-actions">
+            <button id="cancel-confirm-button" class="secondary-button" type="button" data-i18n="cancel">ABBRECHEN</button>
+            <button id="accept-confirm-button" class="danger-button" type="button" data-i18n="delete">LÖSCHEN</button>
+          </div>
+        </section>
+      </div>
+
+      <footer class="shortcut-dock" aria-label="Tastenkombinationen" data-i18n-aria-label="shortcutsAria">
+        <p data-i18n="shortcuts">SHORTCUTS</p>
+        <div class="shortcut-grid">
+          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>Alt</kbd><i>+</i><kbd>N</kbd><b data-i18n="shortcutApp">App</b></span>
+          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>⇧</kbd><i>+</i><kbd>T</kbd><b data-i18n="shortcutTopic">Thema</b></span>
+          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>⇧</kbd><i>+</i><kbd>L</kbd><b data-i18n="shortcutList">Liste</b></span>
+          <span><kbd>Alt</kbd><i>+</i><kbd>1–9</kbd><b data-i18n="shortcutTasks">Liste wählen</b></span>
+          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>1–9</kbd><b data-i18n="shortcutSelectTask">Punkt wählen</b></span>
+          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>↑/↓</kbd><b data-i18n="shortcutNavigateTasks">Navigieren</b></span>
+          <span><kbd data-i18n="spaceKey">Leertaste</kbd><b data-i18n="shortcutToggleTask">Abhaken</b></span>
+        </div>
+      </footer>
+    </main>
+    <template id="list-template">
+      <article class="checklist-card">
+        <span class="pin" aria-hidden="true"></span>
+        <header class="list-heading">
+          <h3>Liste</h3>
+          <button class="delete-button delete-list-button" aria-label="Liste löschen" title="Liste löschen" data-i18n-aria-label="deleteList" data-i18n-title="deleteList">×</button>
+        </header>
+        <div class="list-progress">
+          <div class="progress-track"><span></span></div>
+          <strong></strong>
+        </div>
+        <ul class="checklist-items"></ul>
+        <form class="item-form inline-form">
+          <input maxlength="120" placeholder="Aufgabe hinzufügen …" aria-label="Neue Aufgabe" data-i18n-placeholder="addTaskPlaceholder" data-i18n-aria-label="newTask" />
+          <button class="square-button" type="submit" aria-label="Aufgabe hinzufügen" data-i18n-aria-label="addTask">+</button>
+        </form>
+      </article>
+    </template>
+    <template id="item-template">
+      <ul>
+        <li class="checklist-item">
+          <div class="item-main-row">
+            <label>
+              <span class="item-number">1.</span>
+              <input class="task-checkbox" type="checkbox" />
+              <span class="item-text">Aufgabe</span>
+            </label>
+            <button class="remove-item-button" aria-label="Aufgabe löschen" title="Aufgabe löschen" data-i18n-aria-label="deleteTask" data-i18n-title="deleteTask">×</button>
+          </div>
+          <button class="item-details-toggle" type="button" data-i18n="taskDetails" data-i18n-aria-label="taskDetailsAria">DETAILS</button>
+          <div class="item-details" hidden>
+            <label class="item-description-label">
+              <span data-i18n="taskDescription">Zusätzlicher Text</span>
+              <textarea class="item-description" maxlength="500" data-i18n-placeholder="taskDescriptionPlaceholder" placeholder="Notizen zu dieser Aufgabe …"></textarea>
+            </label>
+            <p class="substep-heading" data-i18n="requiredSteps">BENÖTIGTE SCHRITTE</p>
+            <ul class="substep-items"></ul>
+            <form class="substep-form inline-form">
+              <input maxlength="120" data-i18n-placeholder="addStepPlaceholder" data-i18n-aria-label="newStep" placeholder="Schritt hinzufügen …" aria-label="Neuer Schritt" />
+              <button class="square-button" type="submit" data-i18n-aria-label="addStep" aria-label="Schritt hinzufügen">+</button>
+            </form>
+          </div>
+        </li>
+      </ul>
+    </template>
+    <script src="../translations.js"></script>
+    <script src="renderer.js"></script>
+  </body>
+</html>

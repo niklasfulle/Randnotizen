@@ -1,0 +1,50 @@
+{
+  "name": "randnotizen",
+  "version": "0.1.23",
+  "description": "Eine per Tastenkombination aufklappbare Notizenleiste für Windows.",
+  "author": "Niklas Fulle",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "generate:icon": "node scripts/generate-icon.js",
+    "screenshots": "electron scripts/capture-readme.js",
+    "prebuild": "npm run generate:icon",
+    "test": "node --test",
+    "test:coverage": "c8 --reporter=text --reporter=lcov --check-coverage --lines 80 --functions 80 --branches 80 node --test",
+    "test:hotkeys": "electron scripts/hotkey-repro.js",
+    "test:layout": "electron scripts/layout-repro.js",
+    "build": "electron-builder --win portable",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "@sonar/scan": "5.0.0",
+    "c8": "^12.0.0",
+    "electron": "^44.0.0",
+    "electron-builder": "^26.0.12",
+    "jsdom": "^29.1.1"
+  },
+  "build": {
+    "appId": "de.randnotizen.app",
+    "productName": "Randnotizen",
+    "copyright": "© 2026 Urheberrecht: Niklas Fulle",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "src/assets/icon.ico",
+      "target": [
+        "portable",
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

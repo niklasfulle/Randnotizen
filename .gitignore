@@ -1,0 +1,7 @@
+node_modules/
+release/
+.tmp-ui-test/
+.scannerwork/
+coverage/
+*.log
+*.exe

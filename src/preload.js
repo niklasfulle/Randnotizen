@@ -1,0 +1,17 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('notesApp', {
+  loadWorkspace: () => ipcRenderer.invoke('workspace:load'),
+  saveWorkspace: (workspace) => ipcRenderer.invoke('workspace:save', workspace),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  updateSettings: (settings) => ipcRenderer.invoke('settings:update', settings),
+  previewPosition: (position) => ipcRenderer.invoke('settings:preview-position', position),
+  listDisplays: () => ipcRenderer.invoke('displays:list'),
+  getAutostart: () => ipcRenderer.invoke('autostart:get'),
+  setAutostart: (enabled) => ipcRenderer.invoke('autostart:set', enabled),
+  getVersion: () => ipcRenderer.invoke('app:version'),
+  hide: () => ipcRenderer.send('panel:hide'),
+  onPanelState: (callback) => ipcRenderer.on('panel-state', (_event, state) => callback(state)),
+  onLanguageChanged: (callback) => ipcRenderer.on('language:changed', (_event, language) => callback(language)),
+  onDesignChanged: (callback) => ipcRenderer.on('design:changed', (_event, design) => callback(design)),
+});
