@@ -10,13 +10,19 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 
 - Themen mit beliebig vielen eigenen Listen
 - Nummerierte Aufgaben mit Checkboxen und Fortschrittsanzeige
+- Frei sortierbare Themen, Listen, Aufgaben und Teilschritte per Drag-and-drop
+- Prioritäts-Sticker in drei Stufen
 - Zusätzliche Aufgabentexte und kleine Schrittlisten
+- Listenarchiv für erledigte Aufgaben mit Wiederherstellung
+- Persistenter Papierkorb und schnelles Rückgängig mit `Strg + Z`
+- Lokale JSON-Backups zum Exportieren und Wiederherstellen
 - Rotes Abschluss-X über den Details erledigter Aufgaben
 - Vollständige Tastatursteuerung für Listen und Aufgaben
 - Positionierung am linken oder rechten Rand eines frei wählbaren Bildschirms
 - Direkte Positionsvorschau vor dem Speichern
-- Erweiterbare Designauswahl mit Papier- und Nacht-Collage
+- Acht Designs: Papier, Nacht, Blaupause, Sonnenuntergang, Pastell, Zeitung, Neon und Minimalpapier
 - Auswahl der App-Schriftart
+- Automatische Lesbarkeitsskalierung passend zur verfügbaren Monitorhöhe
 - Optional dauerhaft sichtbar, auch wenn eine andere App den Fokus erhält
 - Deutsche und englische Benutzeroberfläche
 - Optionaler automatischer Start mit Windows
@@ -35,6 +41,7 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 | `Strg + 1–9` | Entsprechend nummerierte Aufgabe der ausgewählten Liste markieren |
 | `Strg + ↑ / ↓` | Innerhalb der Aufgaben navigieren |
 | `Leertaste` | Ausgewählte Aufgabe abhaken oder wieder öffnen |
+| `Strg + Z` | Zuletzt gelöschtes Thema, Liste, Aufgabe oder Teilschritt wiederherstellen |
 
 Die Pfeilnavigation besitzt feste Enden: Am ersten oder letzten Punkt wird nicht zur gegenüberliegenden Seite gesprungen.
 
@@ -44,15 +51,30 @@ Jede Aufgabe kann über **Details** einen zusätzlichen Text und beliebig viele 
 
 Die Datenstruktur ist abwärtskompatibel: Vorhandene Aufgaben erhalten beim ersten Laden automatisch leere Detail- und Schritt-Felder.
 
+## Organisieren und aufräumen
+
+- Themen, Listen, aktive Aufgaben und benötigte Schritte lassen sich innerhalb ihrer Ebene mit der Maus neu anordnen. Die neue Reihenfolge wird sofort gespeichert.
+- Jede Aufgabe kann in den Details als **niedrig**, **mittel** oder **hoch** priorisiert werden. Der passende farbige Sticker erscheint direkt an der Aufgabe.
+- **Erledigte archivieren** verschiebt alle abgeschlossenen Aufgaben einer Liste in deren Archiv. Archivierte Aufgaben lassen sich jederzeit wiederherstellen und werden nicht mehr in der aktiven Fortschrittsanzeige gezählt.
+- Gelöschte Themen, Listen, Aufgaben und Schritte landen zunächst im persistenten Papierkorb. `Strg + Z` stellt den zuletzt gelöschten Eintrag wieder her; im Einstellungs-Popover können einzelne Einträge gewählt oder der Papierkorb endgültig geleert werden.
+
+## Backup und Wiederherstellung
+
+Im Bereich **Daten & Sicherung** des Einstellungs-Popovers lässt sich der vollständige Arbeitsbereich als lesbare JSON-Datei exportieren. Ein solches Backup enthält Themen, Listen, Aufgaben, Details, Schritte, Prioritäten, Archivstatus und Papierkorb. Beim Wiederherstellen wird das gewählte Backup geprüft, in SQLite übernommen und anschließend auf das aktuelle Datenschema migriert.
+
+Backups bleiben vollständig lokal. Randnotizen überträgt keine Notizen an einen Cloud-Dienst.
+
 ## Einstellungen
 
 Über die Schaltfläche **Einstellungen** öffnet sich ein Popover direkt über dem Hauptpanel. Es entsteht dadurch kein zusätzliches Windows-Fenster und kein weiterer Taskleisten-Eintrag.
 
 - Änderungen an Bildschirm und Seite werden sofort als Vorschau gezeigt, aber erst mit **Einstellungen speichern** dauerhaft übernommen.
-- Das Design ist als Auswahl aufgebaut, sodass später weitere Designs ergänzt werden können.
-- Für den normalen App-Text stehen Segoe UI, Arial, Verdana, Georgia und Courier New bereit.
+- Die acht Designs erscheinen als anklickbare Vorschaukarten. Die Auswahl wird sofort auf die App angewendet, aber erst mit **Einstellungen speichern** dauerhaft übernommen; Schließen oder `Esc` stellt das gespeicherte Design wieder her.
+- Für den normalen App-Text stehen Inter, Nunito Sans, Atkinson Hyperlegible, Lora und JetBrains Mono bereit. Die Schrift wird bei der Auswahl sofort als Vorschau angewendet und erst beim Speichern dauerhaft übernommen. Alle Schriftdateien werden mit Randnotizen ausgeliefert und funktionieren dadurch vollständig offline.
+- Die Textgröße passt sich automatisch an die verfügbare Monitorhöhe an: Bereits auf kleineren Bildschirmen gilt eine gut lesbare Mindestskalierung, auf größeren Monitoren wächst sie stufenlos weiter.
 - **Bei Fokusverlust geöffnet lassen** verhindert das automatische Ausblenden. `Strg + Alt + N` setzt dann den Fokus wieder auf Randnotizen.
 - Sprache, Windows-Autostart, Version und Urheberrecht befinden sich ebenfalls an dieser zentralen Stelle.
+- Backup, Wiederherstellung, Rückgängig und Papierkorb sind im Abschnitt **Daten & Sicherung** gebündelt.
 
 ![Randnotizen Einstellungs-Popover](docs/images/randnotizen-settings.png)
 
@@ -111,16 +133,16 @@ Coverage-Bericht inklusive LCOV-Datei für SonarQube erzeugen:
 npm run test:coverage
 ```
 
-Aktueller Stand von Version 0.1.23:
+Aktueller Stand von Version 0.2.0:
 
 | Messwert | Abdeckung |
 | --- | ---: |
-| Zeilen | 97,88 % |
-| Branches | 87,69 % |
-| Funktionen | 98,11 % |
+| Zeilen | 96,36 % |
+| Branches | 84,78 % |
+| Funktionen | 97,72 % |
 
 Der HTML-/LCOV-Bericht wird unter `coverage/` erzeugt. SonarQube liest `coverage/lcov.info` über die Konfiguration in `sonar-project.properties` ein.
-Aktuell decken 18 automatisierte Tests Renderer, Hauptprozess, Hotkeys, Layout, Icons, Übersetzungen und SQLite-Migration ab.
+Aktuell decken 21 automatisierte Tests Renderer, Hauptprozess, Hotkeys, Backup/Restore, Papierkorb, Sortierung, Archiv, Prioritäten, Layout, eingebettete Fonts, Icons, Übersetzungen und SQLite-Migration ab.
 
 ## SonarQube
 
@@ -154,7 +176,8 @@ src/
 ├─ translations.js         Deutsche und englische Übersetzungen
 ├─ tray-icon.js            Tray- und Windows-Anwendungsicon
 ├─ assets/
-│  └─ icon.ico
+│  ├─ icon.ico
+│  └─ fonts/               Eingebettete OFL-Schriften und Lizenztexte
 └─ renderer/
    ├─ index.html           Hauptpanel
    ├─ renderer.js          Themen-, Listen- und Tastaturlogik
@@ -165,6 +188,8 @@ scripts/                   Icon-, Screenshot- und Diagnosewerkzeuge
 docs/images/               Bilder für diese README
 ```
 
+Die eingebetteten Schriftfamilien stammen aus dem offiziellen [Google-Fonts-Repository](https://github.com/google/fonts) und stehen jeweils unter der SIL Open Font License 1.1. Die zugehörigen `OFL.txt`-Dateien werden zusammen mit den Fonts unter `src/assets/fonts/` ausgeliefert.
+
 ## SQLite und Datenmigration
 
 Der Arbeitsbereich wird in `workspace.sqlite` im Electron-`userData`-Verzeichnis gespeichert. Themen, Listen, Aufgaben und benötigte Schritte liegen in getrennten, über Fremdschlüssel verbundenen Tabellen. Schreibvorgänge laufen in Transaktionen, damit ein unvollständiger Speichervorgang nicht nur einen Teil des Arbeitsbereichs aktualisiert.
@@ -172,7 +197,7 @@ Der Arbeitsbereich wird in `workspace.sqlite` im Electron-`userData`-Verzeichnis
 Beim ersten Start mit SQLite gilt folgende Migration:
 
 1. Existiert noch kein gespeicherter SQLite-Arbeitsbereich, sucht Randnotizen zuerst nach `workspace.json` und anschließend nach der älteren `notes.json`.
-2. Die vorhandenen Daten werden durch die normale Datenmigration auf das aktuelle Schema 3 gebracht.
+2. Die vorhandenen Daten werden durch die normale Datenmigration auf das aktuelle Schema 4 gebracht. Bestehende SQLite-Datenbanken erhalten die neuen Spalten für Priorität und Archiv automatisch.
 3. Der migrierte Arbeitsbereich wird transaktional in `workspace.sqlite` gespeichert.
 4. Die ursprünglichen JSON-Dateien bleiben unverändert erhalten und können als Rückfallebene gesichert oder später manuell entfernt werden.
 

@@ -15,16 +15,25 @@ function flush() {
 async function bootRenderer(loadedWorkspace) {
   const dom = new JSDOM(html, { url: 'https://randnotizen.local/' });
   let settings = {
-    displayId: 'primary', side: 'right', language: 'de', design: 'paper', font: 'segoe', keepVisible: false,
+    displayId: 'primary', side: 'right', language: 'de', design: 'paper', font: 'inter', keepVisible: false,
   };
   let autostart = true;
   const saved = [];
   const autostartUpdates = [];
   const callbacks = {};
   const positionPreviews = [];
+  const backupActions = [];
   const notesApp = {
     loadWorkspace: async () => loadedWorkspace,
     saveWorkspace: async (workspace) => saved.push(structuredClone(workspace)),
+    exportWorkspace: async () => {
+      backupActions.push('export');
+      return { canceled: false, filePath: 'backup.json' };
+    },
+    importWorkspace: async () => {
+      backupActions.push('import');
+      return { canceled: false, workspace: structuredClone(saved.at(-1)) };
+    },
     getSettings: async () => ({ ...settings }),
     updateSettings: async (next) => {
       settings = { ...settings, ...next };
@@ -41,7 +50,7 @@ async function bootRenderer(loadedWorkspace) {
       autostartUpdates.push(enabled);
       return enabled;
     },
-    getVersion: async () => '0.1.23',
+    getVersion: async () => '0.2.0',
     hide: () => { callbacks.hidden = true; },
     onPanelState: (callback) => { callbacks.panelState = callback; },
     onLanguageChanged: (callback) => { callbacks.languageChanged = callback; },
@@ -58,7 +67,9 @@ async function bootRenderer(loadedWorkspace) {
   await flush();
   await flush();
 
-  return { dom, saved, callbacks, autostartUpdates, positionPreviews, getSettings: () => settings };
+  return {
+    dom, saved, callbacks, autostartUpdates, positionPreviews, backupActions, getSettings: () => settings,
+  };
 }
 
 function submit(dom, selector, value) {
@@ -115,7 +126,9 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   assert.equal(document.querySelector('#active-topic-title').textContent, 'Arbeit');
   assert.equal(document.querySelector('#topic-progress-label').textContent, '50%');
   assert.equal(document.documentElement.dataset.design, 'paper');
-  assert.equal(document.documentElement.dataset.font, 'segoe');
+  assert.equal(document.documentElement.dataset.font, 'inter');
+  assert.equal(document.documentElement.dataset.textScale, '1.250');
+  assert.equal(document.documentElement.style.getPropertyValue('--text-scale'), '1.250');
   assert.equal(document.querySelectorAll('.checklist-card').length, 2);
   assert.deepEqual(
     [...document.querySelectorAll('.item-number')].map((element) => element.textContent),
@@ -163,6 +176,16 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
 
   document.querySelector('.item-details-toggle').click();
   const description = document.querySelector('.item-description');
+  const descriptionToggle = document.querySelector('.item-description-toggle');
+  const descriptionLabel = document.querySelector('.item-description-label');
+  assert.equal(descriptionLabel.hidden, false);
+  descriptionToggle.click();
+  assert.equal(descriptionLabel.hidden, true);
+  assert.equal(descriptionToggle.getAttribute('aria-expanded'), 'false');
+  descriptionToggle.click();
+  assert.equal(descriptionLabel.hidden, false);
+  assert.equal(descriptionToggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(document.activeElement, description);
   description.value = 'Release sorgfältig vorbereiten';
   description.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
   await flush();
@@ -198,21 +221,39 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   assert.equal(document.querySelector('#settings-overlay').hidden, false);
   assert.equal(document.querySelector('.settings-popover').tagName, 'DIALOG');
   assert.equal(document.querySelector('#save-status').tagName, 'OUTPUT');
-  assert.equal(document.querySelector('#version-label').textContent, '0.1.23');
+  assert.equal(document.querySelector('#version-label').textContent, '0.2.0');
   assert.equal(
     document.querySelector('.copyright-label').textContent,
     '© 2026 Urheberrecht: Niklas Fulle',
   );
   assert.equal(document.querySelector('#autostart-checkbox').checked, true);
   assert.match(document.querySelector('#display-select option:nth-child(2)').textContent, /Primär/);
+  assert.equal(document.querySelectorAll('input[name="design"]').length, 8);
+  const darkDesign = document.querySelector('input[name="design"][value="dark"]');
+  assert.equal(document.querySelector('input[name="design"][value="paper"]').checked, true);
+  document.querySelector('input[name="design"][value="pastel"]').click();
+  assert.equal(document.documentElement.dataset.design, 'pastel');
+  assert.equal(document.documentElement.dataset.theme, 'light');
+  darkDesign.click();
+  assert.equal(document.documentElement.dataset.design, 'dark');
+  assert.equal(getSettings().design, 'paper');
+  document.querySelector('#font-select').value = 'lora';
+  document.querySelector('#font-select').dispatchEvent(new dom.window.Event('change'));
+  assert.equal(document.documentElement.dataset.font, 'lora');
+  assert.equal(getSettings().font, 'inter');
+  document.querySelector('#close-settings-button').click();
+  assert.equal(document.documentElement.dataset.design, 'paper');
+  assert.equal(document.documentElement.dataset.font, 'inter');
+
+  document.querySelector('#open-settings-button').click();
+  await flush();
   document.querySelector('#language-setting').click();
   document.querySelector('#display-select').value = '2';
   document.querySelector('#display-select').dispatchEvent(new dom.window.Event('change'));
   document.querySelector('#side-select').value = 'left';
   document.querySelector('#side-select').dispatchEvent(new dom.window.Event('change'));
-  document.querySelector('#design-select').value = 'dark';
-  document.querySelector('#design-select').dispatchEvent(new dom.window.Event('change'));
-  document.querySelector('#font-select').value = 'georgia';
+  document.querySelector('input[name="design"][value="dark"]').click();
+  document.querySelector('#font-select').value = 'lora';
   document.querySelector('#font-select').dispatchEvent(new dom.window.Event('change'));
   document.querySelector('#autostart-checkbox').checked = false;
   document.querySelector('#keep-visible-checkbox').checked = true;
@@ -221,9 +262,10 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   );
   await flush();
   assert.deepEqual(getSettings(), {
-    displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'georgia', keepVisible: true,
+    displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'lora', keepVisible: true,
   });
   assert.deepEqual(positionPreviews, [
+    { displayId: 'primary', side: 'right' },
     { displayId: '2', side: 'right' },
     { displayId: '2', side: 'left' },
   ]);
@@ -235,7 +277,7 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   );
   assert.equal(document.documentElement.dataset.theme, 'dark');
   assert.equal(document.documentElement.dataset.design, 'dark');
-  assert.equal(document.documentElement.dataset.font, 'georgia');
+  assert.equal(document.documentElement.dataset.font, 'lora');
   assert.equal(document.documentElement.dataset.side, 'left');
   assert.equal(document.querySelector('#save-status').textContent, 'Settings saved.');
   document.querySelector('#close-settings-button').click();
@@ -268,6 +310,77 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   assert.notEqual(document.querySelector('#active-topic-title').textContent, 'Neues Thema');
 });
 
+test('renderer handles priorities, archives, sorting, backups and recoverable deletion', async () => {
+  const loaded = {
+    version: 4,
+    activeTopicId: 'topic-a',
+    trash: [],
+    topics: [{
+      id: 'topic-a',
+      title: 'Release',
+      lists: [{
+        id: 'list-a',
+        title: 'Plan',
+        items: [
+          { id: 'item-a', text: 'Bauen', completed: false, priority: 'none', archived: false, details: '', steps: [] },
+          { id: 'item-b', text: 'Testen', completed: true, priority: 'medium', archived: false, details: '', steps: [] },
+        ],
+      }],
+    }],
+  };
+  const { dom, saved, backupActions } = await bootRenderer(loaded);
+  const { document } = dom.window;
+
+  const priority = document.querySelector('.priority-select');
+  priority.value = 'high';
+  priority.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await flush();
+  assert.equal(document.querySelector('.priority-high').textContent, 'Hoch');
+  assert.equal(saved.at(-1).topics[0].lists[0].items[0].priority, 'high');
+
+  document.querySelector('.archive-completed-button').click();
+  await flush();
+  assert.equal(document.querySelectorAll('.checklist-item').length, 1);
+  assert.equal(document.querySelector('.archive-count').textContent, '1');
+  document.querySelector('.archive-item button').click();
+  await flush();
+  assert.equal(document.querySelectorAll('.checklist-item').length, 2);
+
+  let rows = [...document.querySelectorAll('.checklist-item')];
+  rows[0].dispatchEvent(new dom.window.Event('dragstart', { bubbles: true }));
+  rows[1].dispatchEvent(new dom.window.Event('dragover', { bubbles: true, cancelable: true }));
+  rows[1].dispatchEvent(new dom.window.Event('drop', { bubbles: true, cancelable: true }));
+  await flush();
+  assert.equal(saved.at(-1).topics[0].lists[0].items[0].id, 'item-b');
+
+  document.querySelector('.remove-item-button').click();
+  await flush();
+  assert.equal(saved.at(-1).trash.length, 1);
+  keydown(dom, { ctrlKey: true, code: 'KeyZ' });
+  await flush();
+  assert.equal(document.querySelectorAll('.checklist-item').length, 2);
+  assert.equal(saved.at(-1).trash.length, 0);
+
+  document.querySelector('.remove-item-button').click();
+  await flush();
+  document.querySelector('#open-settings-button').click();
+  await flush();
+  await flush();
+  assert.equal(document.querySelector('#trash-count').textContent, '1');
+  document.querySelector('#export-button').click();
+  await flush();
+  assert.deepEqual(backupActions, ['export']);
+  document.querySelector('#import-button').click();
+  document.querySelector('#accept-confirm-button').click();
+  await flush();
+  assert.deepEqual(backupActions, ['export', 'import']);
+  assert.equal(document.querySelector('#backup-status').textContent, 'Backup wiederhergestellt.');
+  document.querySelector('#empty-trash-button').click();
+  document.querySelector('#accept-confirm-button').click();
+  await flush();
+  assert.equal(document.querySelector('#trash-count').textContent, '0');
+});
+
 test('renderer migrates legacy notes and handles empty and malformed input', async () => {
   const legacyNotes = [
     { title: 'Alt', content: 'Inhalt' },
@@ -276,7 +389,7 @@ test('renderer migrates legacy notes and handles empty and malformed input', asy
   const { dom, saved } = await bootRenderer(legacyNotes);
   const { document } = dom.window;
 
-  assert.equal(saved[0].version, 3);
+  assert.equal(saved[0].version, 4);
   assert.deepEqual(saved[0].topics[0].lists[0].items[0].steps, []);
   assert.equal(document.querySelectorAll('.checklist-item').length, 2);
   assert.match(document.querySelector('.checklist-item .item-text').textContent, /Alt/);

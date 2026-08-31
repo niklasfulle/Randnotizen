@@ -1,4 +1,6 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
+const {
+  app, BrowserWindow, dialog, globalShortcut, ipcMain, screen, Tray, Menu, nativeImage,
+} = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { getPanelBounds, resolveDisplay } = require('./panel-bounds');
@@ -19,7 +21,7 @@ let panelSettings = {
   side: 'right',
   language: 'de',
   design: 'paper',
-  font: 'segoe',
+  font: 'inter',
   keepVisible: false,
 };
 
@@ -111,6 +113,35 @@ function loadWorkspace() {
 
 function saveWorkspace(_event, workspace) {
   workspaceStore.saveWorkspace(workspace);
+}
+
+function backupFileName() {
+  return `Randnotizen-backup-${new Date().toISOString().slice(0, 10)}.json`;
+}
+
+async function exportWorkspace() {
+  const result = await dialog.showSaveDialog(panel, {
+    title: 'Randnotizen Backup',
+    defaultPath: backupFileName(),
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  });
+  if (result.canceled || !result.filePath) return { canceled: true };
+
+  fs.writeFileSync(result.filePath, `${JSON.stringify(workspaceStore.loadWorkspace(), null, 2)}\n`, 'utf8');
+  return { canceled: false, filePath: result.filePath };
+}
+
+async function importWorkspace() {
+  const result = await dialog.showOpenDialog(panel, {
+    title: 'Randnotizen Backup wiederherstellen',
+    properties: ['openFile'],
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  });
+  if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
+
+  const importedWorkspace = JSON.parse(fs.readFileSync(result.filePaths[0], 'utf8'));
+  workspaceStore.saveWorkspace(importedWorkspace);
+  return { canceled: false, workspace: workspaceStore.loadWorkspace() };
 }
 
 function listDisplays() {
@@ -232,6 +263,8 @@ function initializeApplication() {
 
   ipcMain.handle('workspace:load', loadWorkspace);
   ipcMain.handle('workspace:save', saveWorkspace);
+  ipcMain.handle('workspace:export', exportWorkspace);
+  ipcMain.handle('workspace:import', importWorkspace);
   ipcMain.handle('settings:get', () => panelSettings);
   ipcMain.handle('settings:update', updatePanelSettings);
   ipcMain.handle('settings:preview-position', previewPanelPosition);

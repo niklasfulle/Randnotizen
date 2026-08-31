@@ -17,6 +17,7 @@ async function capturePage(file, outputName, width, height, preparePage) {
       preload,
       contextIsolation: true,
       nodeIntegration: false,
+      offscreen: true,
     },
   });
   await window.loadFile(path.join(projectDirectory, 'src', 'renderer', file));
@@ -29,6 +30,9 @@ async function capturePage(file, outputName, width, height, preparePage) {
       'new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
     );
   }
+  await window.webContents.executeJavaScript('document.fonts.ready');
+  window.webContents.invalidate();
+  await new Promise((resolve) => setTimeout(resolve, 100));
   const image = await window.webContents.capturePage();
   fs.writeFileSync(path.join(imagesDirectory, outputName), image.toPNG());
   window.destroy();
@@ -44,10 +48,13 @@ app.once('ready', async () => {
       'index.html',
       'randnotizen-settings.png',
       520,
-      1050,
+      1450,
       `(async () => {
         document.querySelector('#open-settings-button').click();
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        document.querySelector('#settings-overlay').hidden = false;
+        document.querySelector('input[name="design"][value="paper"]').checked = true;
+        await document.fonts.ready;
       })()`,
     );
     app.quit();

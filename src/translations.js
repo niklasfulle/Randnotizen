@@ -50,11 +50,22 @@ const messagePairs = {
   taskDetailsAria: ['Aufgabendetails öffnen oder schließen', 'Open or close task details'],
   taskDescription: ['Zusätzlicher Text', 'Additional text'],
   taskDescriptionPlaceholder: ['Notizen zu dieser Aufgabe …', 'Notes for this task …'],
+  showTaskNotes: ['NOTIZ EINBLENDEN', 'SHOW NOTE'],
+  hideTaskNotes: ['NOTIZ AUSBLENDEN', 'HIDE NOTE'],
   requiredSteps: ['BENÖTIGTE SCHRITTE', 'REQUIRED STEPS'],
   newStep: ['Neuer Schritt', 'New step'],
   addStepPlaceholder: ['Schritt hinzufügen …', 'Add a step …'],
   addStep: ['Schritt hinzufügen', 'Add step'],
   deleteStep: ['Schritt löschen', 'Delete step'],
+  priority: ['Priorität', 'Priority'],
+  priorityNone: ['Keine', 'None'],
+  priorityLow: ['Niedrig', 'Low'],
+  priorityMedium: ['Mittel', 'Medium'],
+  priorityHigh: ['Hoch', 'High'],
+  archiveCompleted: ['ERLEDIGTE ARCHIVIEREN', 'ARCHIVE COMPLETED'],
+  archive: ['ARCHIV', 'ARCHIVE'],
+  archiveEmpty: ['Noch keine archivierten Aufgaben.', 'No archived tasks yet.'],
+  restoreTask: ['Aufgabe wiederherstellen', 'Restore task'],
   general: ['Allgemein', 'General'],
   untitled: ['Ohne Titel', 'Untitled'],
   imported: ['Importiert', 'Imported'],
@@ -82,6 +93,13 @@ const messagePairs = {
   design: ['Design', 'Design'],
   designPaper: ['Papier-Collage', 'Paper collage'],
   designDark: ['Nacht-Collage', 'Night collage'],
+  designBlueprint: ['Blaupause', 'Blueprint'],
+  designSunset: ['Sonnenuntergang', 'Sunset'],
+  designPastel: ['Pastell', 'Pastel'],
+  designNewspaper: ['Zeitung', 'Newspaper'],
+  designNeon: ['Neon', 'Neon'],
+  designMinimal: ['Minimalpapier', 'Minimal paper'],
+  designPreviewHint: ['Auswahl sofort ansehen · dauerhaft erst nach dem Speichern', 'Preview instantly · save to keep it'],
   font: ['Schriftart', 'Font'],
   keepVisible: ['Bei Fokusverlust geöffnet lassen', 'Keep open when focus is lost'],
   keepVisibleHint: ['Strg + Alt + N setzt den Fokus wieder auf Randnotizen.', 'Ctrl + Alt + N focuses Edge Notes again.'],
@@ -91,6 +109,27 @@ const messagePairs = {
   copyright: ['© 2026 Urheberrecht: Niklas Fulle', '© 2026 Copyright: Niklas Fulle'],
   saveSettings: ['EINSTELLUNGEN SPEICHERN', 'SAVE SETTINGS'],
   settingsSaved: ['Einstellungen gespeichert.', 'Settings saved.'],
+  dataManagement: ['DATEN & SICHERUNG', 'DATA & BACKUP'],
+  backupTitle: ['Backup und Papierkorb', 'Backup and trash'],
+  createBackup: ['BACKUP ERSTELLEN', 'CREATE BACKUP'],
+  restoreBackup: ['BACKUP LADEN', 'RESTORE BACKUP'],
+  undoLastDelete: ['RÜCKGÄNGIG', 'UNDO'],
+  emptyTrash: ['PAPIERKORB LEEREN', 'EMPTY TRASH'],
+  trashEmpty: ['Der Papierkorb ist leer.', 'The trash is empty.'],
+  restore: ['Wiederherstellen', 'Restore'],
+  backupSaved: ['Backup gespeichert.', 'Backup saved.'],
+  backupCanceled: ['Vorgang abgebrochen.', 'Operation canceled.'],
+  backupRestored: ['Backup wiederhergestellt.', 'Backup restored.'],
+  backupFailed: ['Backup konnte nicht verarbeitet werden.', 'The backup could not be processed.'],
+  backupRestoreTitle: ['Backup wiederherstellen?', 'Restore backup?'],
+  backupRestoreMessage: ['Die aktuellen Daten werden durch das gewählte Backup ersetzt.', 'Current data will be replaced by the selected backup.'],
+  emptyTrashTitle: ['Papierkorb leeren?', 'Empty trash?'],
+  emptyTrashMessage: ['Alle Einträge im Papierkorb werden endgültig gelöscht.', 'All items in the trash will be deleted permanently.'],
+  deletedTopic: ['Thema', 'Topic'],
+  deletedList: ['Liste', 'List'],
+  deletedItem: ['Aufgabe', 'Task'],
+  deletedStep: ['Schritt', 'Step'],
+  restoreFailed: ['Das übergeordnete Element existiert nicht mehr.', 'The parent item no longer exists.'],
   german: ['Deutsch', 'German'],
   english: ['Englisch', 'English'],
   trayExit: ['Beenden', 'Exit'],
@@ -111,15 +150,24 @@ function normalizeTheme(theme) {
 }
 
 function normalizeDesign(design) {
-  return design === 'dark' ? 'dark' : 'paper';
+  const designs = ['paper', 'dark', 'blueprint', 'sunset', 'pastel', 'newspaper', 'neon', 'minimal'];
+  return designs.includes(design) ? design : 'paper';
 }
 
 function themeForDesign(design) {
-  return normalizeDesign(design) === 'dark' ? 'dark' : 'light';
+  return ['dark', 'blueprint', 'neon'].includes(normalizeDesign(design)) ? 'dark' : 'light';
 }
 
 function normalizeFont(font) {
-  return ['segoe', 'arial', 'verdana', 'georgia', 'courier'].includes(font) ? font : 'segoe';
+  const legacyFonts = {
+    segoe: 'inter',
+    arial: 'inter',
+    verdana: 'atkinson',
+    georgia: 'lora',
+    courier: 'jetbrains-mono',
+  };
+  const bundledFonts = ['inter', 'nunito-sans', 'atkinson', 'lora', 'jetbrains-mono'];
+  return legacyFonts[font] || (bundledFonts.includes(font) ? font : 'inter');
 }
 
 function translate(language, key, variables = {}) {

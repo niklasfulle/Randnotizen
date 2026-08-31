@@ -1,6 +1,6 @@
 {
   "name": "randnotizen",
-  "version": "0.1.23",
+  "version": "0.2.0",
   "description": "Eine per Tastenkombination aufklappbare Notizenleiste für Windows.",
   "author": "Niklas Fulle",
   "main": "src/main.js",

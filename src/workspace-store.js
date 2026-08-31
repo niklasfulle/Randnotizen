@@ -29,6 +29,8 @@ const SCHEMA = `
     text TEXT NOT NULL,
     completed INTEGER NOT NULL CHECK (completed IN (0, 1)),
     details TEXT NOT NULL DEFAULT '',
+    priority TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'low', 'medium', 'high')),
+    archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)),
     sort_order INTEGER NOT NULL
   ) STRICT;
 
@@ -40,6 +42,18 @@ const SCHEMA = `
     sort_order INTEGER NOT NULL
   ) STRICT;
 `;
+
+const WORKSPACE_VERSION = 4;
+
+function ensureItemColumns(database) {
+  const columns = new Set(database.prepare('PRAGMA table_info(items)').all().map(({ name }) => name));
+  if (!columns.has('priority')) {
+    database.exec("ALTER TABLE items ADD COLUMN priority TEXT NOT NULL DEFAULT 'none'");
+  }
+  if (!columns.has('archived')) {
+    database.exec('ALTER TABLE items ADD COLUMN archived INTEGER NOT NULL DEFAULT 0');
+  }
+}
 
 function validateWorkspace(workspace) {
   if (!workspace || typeof workspace !== 'object' || !Array.isArray(workspace.topics)) {
@@ -73,6 +87,8 @@ function insertItems(list, insertItem, insertStep) {
       item.text,
       Number(Boolean(item.completed)),
       typeof item.details === 'string' ? item.details : '',
+      ['low', 'medium', 'high'].includes(item.priority) ? item.priority : 'none',
+      Number(Boolean(item.archived)),
       itemIndex,
     );
     insertSteps(item, insertStep);
@@ -96,6 +112,7 @@ function insertTopics(topics, insertTopic, insertList, insertItem, insertStep) {
 function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs }) {
   const database = new DatabaseSync(databasePath);
   database.exec(SCHEMA);
+  ensureItemColumns(database);
 
   function getMetadata(key) {
     const value = database.prepare('SELECT value FROM metadata WHERE key = ?').get(key)?.value;
@@ -119,12 +136,14 @@ function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs 
     }
 
     const items = database.prepare(
-      'SELECT id, list_id, text, completed, details FROM items ORDER BY sort_order',
+      'SELECT id, list_id, text, completed, details, priority, archived FROM items ORDER BY sort_order',
     ).all().map((item) => ({
       id: item.id,
       text: item.text,
       completed: Boolean(item.completed),
       details: item.details,
+      priority: item.priority,
+      archived: Boolean(item.archived),
       steps: [],
     }));
     const itemRows = database.prepare('SELECT id, list_id FROM items ORDER BY sort_order').all();
@@ -144,10 +163,19 @@ function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs 
       });
     }
 
+    let trash = [];
+    try {
+      const parsedTrash = JSON.parse(getMetadata('trash') || '[]');
+      trash = Array.isArray(parsedTrash) ? parsedTrash : [];
+    } catch {
+      trash = [];
+    }
+
     return {
-      version: 3,
+      version: WORKSPACE_VERSION,
       activeTopicId: getMetadata('active_topic_id') || null,
       topics,
+      trash,
     };
   }
 
@@ -163,7 +191,7 @@ function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs 
       'INSERT INTO lists (id, topic_id, title, sort_order) VALUES (?, ?, ?, ?)',
     );
     const insertItem = database.prepare(
-      'INSERT INTO items (id, list_id, text, completed, details, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO items (id, list_id, text, completed, details, priority, archived, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     );
     const insertStep = database.prepare(
       'INSERT INTO task_steps (id, item_id, text, completed, sort_order) VALUES (?, ?, ?, ?, ?)',
@@ -173,8 +201,9 @@ function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs 
     try {
       database.exec('DELETE FROM topics');
       insertTopics(workspace.topics, insertTopic, insertList, insertItem, insertStep);
-      insertMetadata.run('workspace_version', '3');
+      insertMetadata.run('workspace_version', String(WORKSPACE_VERSION));
       insertMetadata.run('active_topic_id', workspace.activeTopicId || '');
+      insertMetadata.run('trash', JSON.stringify(Array.isArray(workspace.trash) ? workspace.trash : []));
       database.exec('COMMIT');
     } catch (error) {
       database.exec('ROLLBACK');

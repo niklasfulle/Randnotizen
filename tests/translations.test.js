@@ -24,11 +24,20 @@ test('normalizes light and dark themes', () => {
 
 test('normalizes extensible designs and app fonts', () => {
   assert.equal(normalizeDesign('dark'), 'dark');
+  assert.equal(normalizeDesign('pastel'), 'pastel');
+  assert.equal(normalizeDesign('newspaper'), 'newspaper');
+  assert.equal(normalizeDesign('minimal'), 'minimal');
   assert.equal(normalizeDesign('unknown'), 'paper');
   assert.equal(themeForDesign('dark'), 'dark');
+  assert.equal(themeForDesign('blueprint'), 'dark');
+  assert.equal(themeForDesign('neon'), 'dark');
+  assert.equal(themeForDesign('sunset'), 'light');
   assert.equal(themeForDesign('paper'), 'light');
-  assert.equal(normalizeFont('georgia'), 'georgia');
-  assert.equal(normalizeFont('comic-sans'), 'segoe');
+  assert.equal(normalizeFont('lora'), 'lora');
+  assert.equal(normalizeFont('nunito-sans'), 'nunito-sans');
+  assert.equal(normalizeFont('georgia'), 'lora');
+  assert.equal(normalizeFont('courier'), 'jetbrains-mono');
+  assert.equal(normalizeFont('comic-sans'), 'inter');
 });
 
 test('translates interface text in German and English', () => {
@@ -37,6 +46,9 @@ test('translates interface text in German and English', () => {
   assert.equal(translate('en', 'newTopic'), 'New topic …');
   assert.equal(translate('de', 'darkTheme'), 'Dunkel');
   assert.equal(translate('en', 'darkTheme'), 'Dark');
+  assert.equal(translate('de', 'designNewspaper'), 'Zeitung');
+  assert.equal(translate('de', 'hideTaskNotes'), 'NOTIZ AUSBLENDEN');
+  assert.equal(translate('en', 'showTaskNotes'), 'SHOW NOTE');
   assert.equal(translate('de', 'copyright'), '© 2026 Urheberrecht: Niklas Fulle');
   assert.equal(translate('en', 'copyright'), '© 2026 Copyright: Niklas Fulle');
 });

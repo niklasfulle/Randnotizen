@@ -44,6 +44,8 @@ test('preload exposes the complete renderer API and forwards IPC events', async 
   const settings = { displayId: 'primary', side: 'left' };
   await exposedApi.loadWorkspace();
   await exposedApi.saveWorkspace(workspace);
+  await exposedApi.exportWorkspace();
+  await exposedApi.importWorkspace();
   await exposedApi.getSettings();
   await exposedApi.updateSettings(settings);
   await exposedApi.previewPosition(settings);
@@ -56,6 +58,8 @@ test('preload exposes the complete renderer API and forwards IPC events', async 
   assert.deepEqual(invocations, [
     ['workspace:load', undefined],
     ['workspace:save', workspace],
+    ['workspace:export', undefined],
+    ['workspace:import', undefined],
     ['settings:get', undefined],
     ['settings:update', settings],
     ['settings:preview-position', settings],

@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const Module = require('node:module');
 
-test('main process wires panel, tray, persistence, settings and lifecycle events', (context) => {
+test('main process wires panel, tray, persistence, settings and lifecycle events', async (context) => {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'randnotizen-main-'));
   context.after(() => fs.rmSync(userData, { recursive: true, force: true }));
 
@@ -17,7 +17,7 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   const app = new EventEmitter();
   app.getPath = () => userData;
   app.exit = (code) => { app.exitCode = code; };
-  app.getVersion = () => '0.1.23';
+  app.getVersion = () => '0.2.0';
   app.getLoginItemSettings = () => ({ openAtLogin: Boolean(app.loginSettings?.openAtLogin) });
   app.setLoginItemSettings = (settings) => { app.loginSettings = settings; };
 
@@ -68,7 +68,15 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   screen.getPrimaryDisplay = () => displays[0];
   const Menu = { buildFromTemplate: (template) => template };
   const nativeImage = { createFromBuffer: () => ({ isEmpty: () => false }) };
-  const electron = { app, BrowserWindow: FakeBrowserWindow, globalShortcut, ipcMain, screen, Tray: FakeTray, Menu, nativeImage };
+  let saveDialogResult = { canceled: true };
+  let openDialogResult = { canceled: true };
+  const dialog = {
+    showSaveDialog: async () => saveDialogResult,
+    showOpenDialog: async () => openDialogResult,
+  };
+  const electron = {
+    app, BrowserWindow: FakeBrowserWindow, dialog, globalShortcut, ipcMain, screen, Tray: FakeTray, Menu, nativeImage,
+  };
 
   const originalLoad = Module._load;
   Module._load = function mockElectron(request, parent, isMain) {
@@ -102,10 +110,17 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   assert.equal(handlers.get('workspace:load')(), null);
   fs.writeFileSync(path.join(userData, 'notes.json'), JSON.stringify([{ title: 'Alt' }]));
   assert.deepEqual(handlers.get('workspace:load')(), [{ title: 'Alt' }]);
-  const workspace = { version: 3, activeTopicId: null, topics: [] };
+  const workspace = { version: 4, activeTopicId: null, topics: [], trash: [] };
   handlers.get('workspace:save')(null, workspace);
   assert.deepEqual(handlers.get('workspace:load')(), workspace);
   assert.throws(() => handlers.get('workspace:save')(null, null), /Ungültige/);
+
+  const backupPath = path.join(userData, 'backup.json');
+  saveDialogResult = { canceled: false, filePath: backupPath };
+  assert.deepEqual(await handlers.get('workspace:export')(), { canceled: false, filePath: backupPath });
+  assert.deepEqual(JSON.parse(fs.readFileSync(backupPath, 'utf8')), workspace);
+  openDialogResult = { canceled: false, filePaths: [backupPath] };
+  assert.deepEqual((await handlers.get('workspace:import')()).workspace, workspace);
 
   const listedDisplays = handlers.get('displays:list')();
   assert.equal(listedDisplays[0].label, 'Bildschirm 1');
@@ -115,10 +130,10 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   }), { displayId: '2', side: 'left' });
   assert.equal(handlers.get('settings:get')().displayId, 'primary');
   const updated = handlers.get('settings:update')(null, {
-    displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'georgia', keepVisible: true,
+    displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'lora', keepVisible: true,
   });
   assert.deepEqual(updated, {
-    displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'georgia', keepVisible: true,
+    displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'lora', keepVisible: true,
   });
   assert.equal(panel.bounds.x, 1920);
   assert.ok(panel.webContents.messages.some(([channel]) => channel === 'language:changed'));
@@ -134,7 +149,7 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   assert.equal(panel.visible, false);
 
   assert.deepEqual(tray.menu.map((item) => item.type || item.label), ['Open Edge Notes', 'separator', 'Exit']);
-  assert.equal(handlers.get('app:version')(), '0.1.23');
+  assert.equal(handlers.get('app:version')(), '0.2.0');
   assert.equal(handlers.get('autostart:get')(), false);
   assert.equal(handlers.get('autostart:set')(null, true), true);
   assert.equal(app.loginSettings.openAtLogin, true);

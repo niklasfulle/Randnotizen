@@ -55,7 +55,8 @@
 
       <div id="settings-overlay" class="settings-overlay" hidden>
         <dialog class="settings-popover" open aria-modal="true" aria-labelledby="settings-title">
-          <span class="settings-tape" aria-hidden="true"></span>
+          <span class="settings-pin settings-pin-left" aria-hidden="true"></span>
+          <span class="settings-pin settings-pin-right" aria-hidden="true"></span>
           <header class="settings-heading">
             <div>
               <p class="composer-label" data-i18n="settingsEyebrow">RANDNOTIZEN KONFIGURIEREN</p>
@@ -66,7 +67,7 @@
 
           <form id="settings-form">
             <div class="settings-field-grid">
-              <label>
+              <label class="settings-display-field">
                 <span data-i18n="display">Bildschirm</span>
                 <select id="display-select"></select>
               </label>
@@ -78,23 +79,63 @@
                 </select>
               </label>
               <label>
-                <span data-i18n="design">Design</span>
-                <select id="design-select">
-                  <option value="paper" data-i18n="designPaper">Papier-Collage</option>
-                  <option value="dark" data-i18n="designDark">Nacht-Collage</option>
-                </select>
-              </label>
-              <label>
                 <span data-i18n="font">Schriftart</span>
                 <select id="font-select">
-                  <option value="segoe">Segoe UI</option>
-                  <option value="arial">Arial</option>
-                  <option value="verdana">Verdana</option>
-                  <option value="georgia">Georgia</option>
-                  <option value="courier">Courier New</option>
+                  <option value="inter">Inter</option>
+                  <option value="nunito-sans">Nunito Sans</option>
+                  <option value="atkinson">Atkinson Hyperlegible</option>
+                  <option value="lora">Lora</option>
+                  <option value="jetbrains-mono">JetBrains Mono</option>
                 </select>
               </label>
             </div>
+
+            <fieldset class="design-picker">
+              <legend data-i18n="design">Design</legend>
+              <div class="design-options">
+                <label class="design-option">
+                  <input type="radio" name="design" value="paper" aria-describedby="design-preview-hint" />
+                  <span class="design-swatch paper-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="design-option-name" data-i18n="designPaper">Papier-Collage</span>
+                </label>
+                <label class="design-option">
+                  <input type="radio" name="design" value="dark" aria-describedby="design-preview-hint" />
+                  <span class="design-swatch dark-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="design-option-name" data-i18n="designDark">Nacht-Collage</span>
+                </label>
+                <label class="design-option">
+                  <input type="radio" name="design" value="blueprint" aria-describedby="design-preview-hint" />
+                  <span class="design-swatch blueprint-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="design-option-name" data-i18n="designBlueprint">Blaupause</span>
+                </label>
+                <label class="design-option">
+                  <input type="radio" name="design" value="sunset" aria-describedby="design-preview-hint" />
+                  <span class="design-swatch sunset-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="design-option-name" data-i18n="designSunset">Sonnenuntergang</span>
+                </label>
+                <label class="design-option">
+                  <input type="radio" name="design" value="pastel" aria-describedby="design-preview-hint" />
+                  <span class="design-swatch pastel-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="design-option-name" data-i18n="designPastel">Pastell</span>
+                </label>
+                <label class="design-option">
+                  <input type="radio" name="design" value="newspaper" aria-describedby="design-preview-hint" />
+                  <span class="design-swatch newspaper-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="design-option-name" data-i18n="designNewspaper">Zeitung</span>
+                </label>
+                <label class="design-option">
+                  <input type="radio" name="design" value="neon" aria-describedby="design-preview-hint" />
+                  <span class="design-swatch neon-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="design-option-name" data-i18n="designNeon">Neon</span>
+                </label>
+                <label class="design-option">
+                  <input type="radio" name="design" value="minimal" aria-describedby="design-preview-hint" />
+                  <span class="design-swatch minimal-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <span class="design-option-name" data-i18n="designMinimal">Minimalpapier</span>
+                </label>
+              </div>
+              <small id="design-preview-hint" data-i18n="designPreviewHint">Auswahl sofort ansehen · dauerhaft erst nach dem Speichern</small>
+            </fieldset>
 
             <div class="settings-toggle-grid">
               <div>
@@ -113,6 +154,24 @@
               <input id="keep-visible-checkbox" type="checkbox" />
               <span><b data-i18n="keepVisible">Bei Fokusverlust geöffnet lassen</b><small data-i18n="keepVisibleHint">Strg + Alt + N setzt den Fokus wieder auf Randnotizen.</small></span>
             </label>
+
+            <section class="data-tools" aria-labelledby="data-tools-title">
+              <div class="data-tools-heading">
+                <div>
+                  <p class="composer-label" data-i18n="dataManagement">DATEN & SICHERUNG</p>
+                  <h3 id="data-tools-title" data-i18n="backupTitle">Backup und Papierkorb</h3>
+                </div>
+                <span id="trash-count" class="trash-count">0</span>
+              </div>
+              <div class="data-tool-actions">
+                <button id="export-button" class="secondary-button" type="button" data-i18n="createBackup">BACKUP ERSTELLEN</button>
+                <button id="import-button" class="secondary-button" type="button" data-i18n="restoreBackup">BACKUP LADEN</button>
+                <button id="undo-button" class="secondary-button" type="button" data-i18n="undoLastDelete">RÜCKGÄNGIG</button>
+              </div>
+              <div id="trash-list" class="trash-list"></div>
+              <button id="empty-trash-button" class="text-button danger-text" type="button" data-i18n="emptyTrash">PAPIERKORB LEEREN</button>
+              <output id="backup-status" class="save-status" aria-live="polite"></output>
+            </section>
 
             <footer class="settings-footer">
               <div class="version-meta">
@@ -163,7 +222,14 @@
           <div class="progress-track"><span></span></div>
           <strong></strong>
         </div>
+        <div class="list-tools">
+          <button class="archive-completed-button text-button" type="button" data-i18n="archiveCompleted">ERLEDIGTE ARCHIVIEREN</button>
+        </div>
         <ul class="checklist-items"></ul>
+        <details class="archive-section">
+          <summary><span data-i18n="archive">ARCHIV</span> <b class="archive-count">0</b></summary>
+          <ul class="archive-items"></ul>
+        </details>
         <form class="item-form inline-form">
           <input maxlength="120" placeholder="Aufgabe hinzufügen …" aria-label="Neue Aufgabe" data-i18n-placeholder="addTaskPlaceholder" data-i18n-aria-label="newTask" />
           <button class="square-button" type="submit" aria-label="Aufgabe hinzufügen" data-i18n-aria-label="addTask">+</button>
@@ -179,10 +245,21 @@
               <input class="task-checkbox" type="checkbox" />
               <span class="item-text">Aufgabe</span>
             </label>
+            <span class="priority-sticker" hidden></span>
             <button class="remove-item-button" aria-label="Aufgabe löschen" title="Aufgabe löschen" data-i18n-aria-label="deleteTask" data-i18n-title="deleteTask">×</button>
           </div>
           <button class="item-details-toggle" type="button" data-i18n="taskDetails" data-i18n-aria-label="taskDetailsAria">DETAILS</button>
           <div class="item-details" hidden>
+            <label class="priority-field">
+              <span data-i18n="priority">Priorität</span>
+              <select class="priority-select">
+                <option value="none" data-i18n="priorityNone">Keine</option>
+                <option value="low" data-i18n="priorityLow">Niedrig</option>
+                <option value="medium" data-i18n="priorityMedium">Mittel</option>
+                <option value="high" data-i18n="priorityHigh">Hoch</option>
+              </select>
+            </label>
+            <button class="item-description-toggle" type="button" aria-expanded="true">NOTIZ AUSBLENDEN</button>
             <label class="item-description-label">
               <span data-i18n="taskDescription">Zusätzlicher Text</span>
               <textarea class="item-description" maxlength="500" data-i18n-placeholder="taskDescriptionPlaceholder" placeholder="Notizen zu dieser Aufgabe …"></textarea>

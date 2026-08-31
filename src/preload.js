@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('notesApp', {
   loadWorkspace: () => ipcRenderer.invoke('workspace:load'),
   saveWorkspace: (workspace) => ipcRenderer.invoke('workspace:save', workspace),
+  exportWorkspace: () => ipcRenderer.invoke('workspace:export'),
+  importWorkspace: () => ipcRenderer.invoke('workspace:import'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   updateSettings: (settings) => ipcRenderer.invoke('settings:update', settings),
   previewPosition: (position) => ipcRenderer.invoke('settings:preview-position', position),

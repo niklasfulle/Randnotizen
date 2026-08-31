@@ -18,13 +18,20 @@ const settingsOverlay = document.querySelector('#settings-overlay');
 const settingsForm = document.querySelector('#settings-form');
 const displaySelect = document.querySelector('#display-select');
 const sideSelect = document.querySelector('#side-select');
-const designSelect = document.querySelector('#design-select');
+const designOptions = [...document.querySelectorAll('input[name="design"]')];
 const fontSelect = document.querySelector('#font-select');
 const languageSetting = document.querySelector('#language-setting');
 const autostartCheckbox = document.querySelector('#autostart-checkbox');
 const keepVisibleCheckbox = document.querySelector('#keep-visible-checkbox');
 const versionLabel = document.querySelector('#version-label');
 const saveStatus = document.querySelector('#save-status');
+const backupStatus = document.querySelector('#backup-status');
+const trashCount = document.querySelector('#trash-count');
+const trashList = document.querySelector('#trash-list');
+const exportButton = document.querySelector('#export-button');
+const importButton = document.querySelector('#import-button');
+const undoButton = document.querySelector('#undo-button');
+const emptyTrashButton = document.querySelector('#empty-trash-button');
 const closeSettingsButton = document.querySelector('#close-settings-button');
 const confirmOverlay = document.querySelector('#confirm-overlay');
 const confirmTitle = document.querySelector('#confirm-title');
@@ -43,16 +50,29 @@ const {
 } = globalThis.RandnotizenI18n;
 let currentLanguage = 'de';
 let currentDesign = 'paper';
-let currentFont = 'segoe';
+let currentFont = 'inter';
 let settingsLanguage = 'de';
 let settingsDesign = 'paper';
-let settingsFont = 'segoe';
+let settingsFont = 'inter';
 let availableDisplays = [];
 let openedSettings = null;
 let workspace = createDefaultWorkspace();
 let resolveConfirmation = null;
 let selectedShortcutListId = null;
 let selectedShortcutItemId = null;
+let dragState = null;
+const collapsedDescriptionItemIds = new Set();
+
+function textScaleForHeight(viewportHeight) {
+  return Math.min(1.42, Math.max(1.25, 1.05 + (viewportHeight / 6000)));
+}
+
+function updateTextScale() {
+  const viewportHeight = document.documentElement.clientHeight || 1080;
+  const scale = textScaleForHeight(viewportHeight);
+  document.documentElement.style.setProperty('--text-scale', scale.toFixed(3));
+  document.documentElement.dataset.textScale = scale.toFixed(3);
+}
 
 function t(key, variables) {
   return translate(currentLanguage, key, variables);
@@ -92,14 +112,23 @@ function applyLanguage(language) {
 function applyDesign(design) {
   currentDesign = normalizeDesign(design);
   const theme = themeForDesign(currentDesign);
+  const themeColors = {
+    paper: '#f3ead7', dark: '#111720', blueprint: '#082c5b', sunset: '#fff0c7',
+    pastel: '#fff4fa', newspaper: '#e8e2d5', neon: '#100b21', minimal: '#fcfcfa',
+  };
   document.documentElement.dataset.design = currentDesign;
   document.documentElement.dataset.theme = theme;
-  themeColor.content = theme === 'dark' ? '#111720' : '#f3ead7';
+  themeColor.content = themeColors[currentDesign];
 }
 
 function applyFont(font) {
   currentFont = normalizeFont(font);
   document.documentElement.dataset.font = currentFont;
+}
+
+function selectSettingsDesign(design) {
+  settingsDesign = normalizeDesign(design);
+  for (const option of designOptions) option.checked = option.value === settingsDesign;
 }
 
 function settingsT(key) {
@@ -117,6 +146,39 @@ function localizeSettingsPopover() {
   languageOptions[0].classList.toggle('active', settingsLanguage === 'de');
   languageOptions[1].classList.toggle('active', settingsLanguage === 'en');
   languageSetting.setAttribute('aria-label', settingsT('switchLanguage'));
+}
+
+function trashEntryLabel(entry) {
+  const typeKey = `deleted${entry.type[0].toUpperCase()}${entry.type.slice(1)}`;
+  return `${settingsT(typeKey)} · ${entry.value.title || entry.value.text}`;
+}
+
+function renderTrash() {
+  const entries = [...workspace.trash].reverse();
+  trashCount.textContent = `${entries.length}`;
+  trashList.replaceChildren();
+  undoButton.disabled = !entries.length;
+  emptyTrashButton.disabled = !entries.length;
+  if (!entries.length) {
+    const empty = document.createElement('p');
+    empty.className = 'trash-empty';
+    empty.textContent = settingsT('trashEmpty');
+    trashList.append(empty);
+    return;
+  }
+  for (const entry of entries) {
+    const row = document.createElement('div');
+    const label = document.createElement('span');
+    const restoreButton = document.createElement('button');
+    row.className = 'trash-entry';
+    label.textContent = trashEntryLabel(entry);
+    restoreButton.type = 'button';
+    restoreButton.className = 'text-button';
+    restoreButton.textContent = settingsT('restore');
+    restoreButton.addEventListener('click', () => restoreDeletedEntry(entry.id));
+    row.append(label, restoreButton);
+    trashList.append(row);
+  }
 }
 
 function renderSettingsDisplays(selectedId) {
@@ -145,12 +207,11 @@ async function openSettingsPopover() {
     globalThis.notesApp.getVersion(),
   ]);
   settingsLanguage = normalizeLanguage(settings.language);
-  settingsDesign = normalizeDesign(settings.design);
+  selectSettingsDesign(settings.design);
   settingsFont = normalizeFont(settings.font);
   availableDisplays = displays;
   openedSettings = settings;
   sideSelect.value = settings.side;
-  designSelect.value = settingsDesign;
   fontSelect.value = settingsFont;
   autostartCheckbox.checked = autostart;
   keepVisibleCheckbox.checked = Boolean(settings.keepVisible);
@@ -158,6 +219,7 @@ async function openSettingsPopover() {
   saveStatus.textContent = '';
   localizeSettingsPopover();
   renderSettingsDisplays(settings.displayId);
+  renderTrash();
   settingsOverlay.hidden = false;
   requestAnimationFrame(() => closeSettingsButton.focus());
 }
@@ -169,6 +231,8 @@ function closeSettingsPopover() {
       side: openedSettings.side,
     });
     document.documentElement.dataset.side = openedSettings.side;
+    applyDesign(openedSettings.design);
+    applyFont(openedSettings.font);
   }
   settingsOverlay.hidden = true;
   document.querySelector('#open-settings-button').focus();
@@ -181,9 +245,10 @@ function createId() {
 function createDefaultWorkspace() {
   const topicId = createId();
   return {
-    version: 3,
+    version: 4,
     activeTopicId: topicId,
     topics: [{ id: topicId, title: t('general'), lists: [] }],
+    trash: [],
   };
 }
 
@@ -203,7 +268,24 @@ function migrateItem(item) {
     text: item.text.trim(),
     completed: Boolean(item.completed),
     details: typeof item.details === 'string' ? item.details.trim() : '',
+    priority: ['low', 'medium', 'high'].includes(item.priority) ? item.priority : 'none',
+    archived: Boolean(item.archived),
     steps: Array.isArray(item.steps) ? item.steps.map(migrateStep).filter(Boolean) : [],
+  };
+}
+
+function migrateTrashEntry(entry) {
+  if (!entry || !['topic', 'list', 'item', 'step'].includes(entry.type)) return null;
+  const migrations = { topic: migrateTopic, list: migrateList, item: migrateItem, step: migrateStep };
+  const value = migrations[entry.type](entry.value);
+  if (!value) return null;
+  return {
+    id: typeof entry.id === 'string' ? entry.id : createId(),
+    type: entry.type,
+    parentId: typeof entry.parentId === 'string' ? entry.parentId : null,
+    index: Number.isInteger(entry.index) && entry.index >= 0 ? entry.index : 0,
+    deletedAt: typeof entry.deletedAt === 'string' ? entry.deletedAt : new Date().toISOString(),
+    value,
   };
 }
 
@@ -231,18 +313,19 @@ function migrateWorkspace(loaded) {
 
     if (!topics.length) return createDefaultWorkspace();
     return {
-      version: 3,
+      version: 4,
       activeTopicId: topics.some((topic) => topic.id === loaded.activeTopicId)
         ? loaded.activeTopicId
         : topics[0].id,
       topics,
+      trash: Array.isArray(loaded.trash) ? loaded.trash.map(migrateTrashEntry).filter(Boolean) : [],
     };
   }
 
   if (Array.isArray(loaded) && loaded.length) {
     const topicId = createId();
     return {
-      version: 3,
+      version: 4,
       activeTopicId: topicId,
       topics: [{
         id: topicId,
@@ -255,10 +338,13 @@ function migrateWorkspace(loaded) {
             text: [note?.title, note?.content].filter(Boolean).join(' — ') || t('note'),
             completed: false,
             details: '',
+            priority: 'none',
+            archived: false,
             steps: [],
           })),
         }],
       }],
+      trash: [],
     };
   }
 
@@ -267,6 +353,117 @@ function migrateWorkspace(loaded) {
 
 function activeTopic() {
   return workspace.topics.find((topic) => topic.id === workspace.activeTopicId) || null;
+}
+
+function findList(listId) {
+  return workspace.topics.flatMap((topic) => topic.lists)
+    .find((list) => list.id === listId) || null;
+}
+
+function findItem(itemId) {
+  return workspace.topics.flatMap((topic) => topic.lists)
+    .flatMap((list) => list.items)
+    .find((item) => item.id === itemId) || null;
+}
+
+function moveToTrash(type, value, parentId, index) {
+  workspace.trash.push({
+    id: createId(),
+    type,
+    parentId,
+    index,
+    deletedAt: new Date().toISOString(),
+    value: structuredClone(value),
+  });
+}
+
+function insertAt(items, index, value) {
+  items.splice(Math.min(index, items.length), 0, value);
+}
+
+function restoreTrashEntry(entry) {
+  if (entry.type === 'topic') {
+    insertAt(workspace.topics, entry.index, entry.value);
+    workspace.activeTopicId ||= entry.value.id;
+    return true;
+  }
+  if (entry.type === 'list') {
+    const topic = workspace.topics.find((candidate) => candidate.id === entry.parentId);
+    if (!topic) return false;
+    insertAt(topic.lists, entry.index, entry.value);
+    return true;
+  }
+  if (entry.type === 'item') {
+    const list = findList(entry.parentId);
+    if (!list) return false;
+    insertAt(list.items, entry.index, entry.value);
+    return true;
+  }
+  const item = findItem(entry.parentId);
+  if (!item) return false;
+  insertAt(item.steps, entry.index, entry.value);
+  return true;
+}
+
+async function restoreDeletedEntry(entryId) {
+  const index = workspace.trash.findIndex((entry) => entry.id === entryId);
+  if (index < 0) return false;
+  const [entry] = workspace.trash.splice(index, 1);
+  if (!restoreTrashEntry(entry)) {
+    workspace.trash.splice(index, 0, entry);
+    backupStatus.textContent = settingsT('restoreFailed');
+    return false;
+  }
+  await persist();
+  render();
+  renderTrash();
+  return true;
+}
+
+async function undoLastDelete() {
+  const lastEntry = workspace.trash.at(-1);
+  if (lastEntry) await restoreDeletedEntry(lastEntry.id);
+}
+
+function moveArrayEntry(items, sourceId, targetId) {
+  const sourceIndex = items.findIndex((item) => item.id === sourceId);
+  const targetIndex = items.findIndex((item) => item.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return false;
+  const [source] = items.splice(sourceIndex, 1);
+  items.splice(targetIndex, 0, source);
+  return true;
+}
+
+function configureSortable(element, { type, parentId, id, items }) {
+  element.draggable = true;
+  element.addEventListener('dragstart', (event) => {
+    event.stopPropagation();
+    dragState = { type, parentId, id };
+    element.classList.add('dragging');
+  });
+  element.addEventListener('dragover', (event) => {
+    if (dragState?.type !== type || dragState.parentId !== parentId) return;
+    event.stopPropagation();
+    event.preventDefault();
+    element.classList.add('drag-over');
+  });
+  element.addEventListener('dragleave', () => element.classList.remove('drag-over'));
+  element.addEventListener('drop', async (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    element.classList.remove('drag-over');
+    if (dragState?.type !== type || dragState.parentId !== parentId) return;
+    if (moveArrayEntry(items, dragState.id, id)) {
+      await persist();
+      render();
+    }
+  });
+  element.addEventListener('dragend', (event) => {
+    event.stopPropagation();
+    dragState = null;
+    element.classList.remove('dragging');
+    for (const candidate of document.querySelectorAll('.drag-over')) candidate.classList.remove('drag-over');
+  });
 }
 
 function selectShortcutList(listId) {
@@ -305,7 +502,7 @@ function calculateProgress(items) {
 }
 
 function topicProgress(topic) {
-  return calculateProgress(topic.lists.flatMap((list) => list.items));
+  return calculateProgress(topic.lists.flatMap((list) => list.items.filter((item) => !item.archived)));
 }
 
 function cardStyle(id) {
@@ -317,10 +514,11 @@ async function persist() {
   await globalThis.notesApp.saveWorkspace(workspace);
 }
 
-function askToDelete(title, message) {
+function askToDelete(title, message, acceptKey = 'delete') {
   if (resolveConfirmation) resolveConfirmation(false);
   confirmTitle.textContent = title;
   confirmMessage.textContent = message;
+  acceptConfirmButton.textContent = t(acceptKey);
   confirmOverlay.hidden = false;
   requestAnimationFrame(() => cancelConfirmButton.focus());
   return new Promise((resolve) => {
@@ -355,8 +553,12 @@ function renderTopics() {
     button.className = `topic-tab ${cardStyle(topic.id)}`;
     button.classList.toggle('active', topic.id === workspace.activeTopicId);
     button.textContent = topic.title;
+    configureSortable(button, {
+      type: 'topic', parentId: 'workspace', id: topic.id, items: workspace.topics,
+    });
     button.addEventListener('click', async () => {
       workspace.activeTopicId = topic.id;
+      selectedShortcutItemId = null;
       await persist();
       render();
     });
@@ -367,6 +569,7 @@ function renderTopics() {
 function createStepElement(item, step) {
   const row = document.createElement('li');
   row.className = 'substep-item';
+  row.dataset.stepId = step.id;
   row.classList.toggle('completed', step.completed);
   const label = document.createElement('label');
   const checkbox = document.createElement('input');
@@ -384,6 +587,9 @@ function createStepElement(item, step) {
   removeButton.title = t('deleteStep');
   label.append(checkbox, text);
   row.append(label, removeButton);
+  configureSortable(row, {
+    type: 'step', parentId: item.id, id: step.id, items: item.steps,
+  });
 
   checkbox.addEventListener('change', async () => {
     step.completed = checkbox.checked;
@@ -391,6 +597,7 @@ function createStepElement(item, step) {
     render();
   });
   removeButton.addEventListener('click', async () => {
+    moveToTrash('step', step, item.id, item.steps.indexOf(step));
     item.steps = item.steps.filter((candidate) => candidate.id !== step.id);
     await persist();
     render();
@@ -398,29 +605,39 @@ function createStepElement(item, step) {
   return row;
 }
 
-function createItemElement(topic, list, item) {
+function createItemElement(topic, list, item, itemNumber) {
   const row = itemTemplate.content.querySelector('.checklist-item').cloneNode(true);
   localizeElements(row);
   const checkbox = row.querySelector('.task-checkbox');
   const number = row.querySelector('.item-number');
   const text = row.querySelector('.item-text');
+  const prioritySticker = row.querySelector('.priority-sticker');
+  const prioritySelect = row.querySelector('.priority-select');
   const detailsToggle = row.querySelector('.item-details-toggle');
   const detailsPanel = row.querySelector('.item-details');
+  const descriptionToggle = row.querySelector('.item-description-toggle');
+  const descriptionLabel = row.querySelector('.item-description-label');
   const description = row.querySelector('.item-description');
   const stepsElement = row.querySelector('.substep-items');
   const stepForm = row.querySelector('.substep-form');
   const stepInput = stepForm.querySelector('input');
   checkbox.checked = item.completed;
   row.dataset.itemId = item.id;
-  number.textContent = `${list.items.indexOf(item) + 1}.`;
+  number.textContent = `${itemNumber}.`;
   text.textContent = item.text;
+  prioritySelect.value = item.priority;
+  prioritySticker.hidden = item.priority === 'none';
+  prioritySticker.className = `priority-sticker priority-${item.priority}`;
+  prioritySticker.textContent = item.priority === 'none' ? '' : t(`priority${item.priority[0].toUpperCase()}${item.priority.slice(1)}`);
   row.classList.toggle('completed', item.completed);
   row.classList.toggle('keyboard-selected', item.id === selectedShortcutItemId);
   description.value = item.details;
+  descriptionLabel.hidden = collapsedDescriptionItemIds.has(item.id);
+  descriptionToggle.textContent = t(descriptionLabel.hidden ? 'showTaskNotes' : 'hideTaskNotes');
+  descriptionToggle.setAttribute('aria-expanded', String(!descriptionLabel.hidden));
   detailsPanel.hidden = !(item.details || item.steps.length);
   detailsToggle.setAttribute('aria-expanded', String(!detailsPanel.hidden));
   for (const step of item.steps) stepsElement.append(createStepElement(item, step));
-  const itemNumber = list.items.indexOf(item) + 1;
   if (list.id === selectedShortcutListId && itemNumber <= 9) {
     checkbox.setAttribute('aria-keyshortcuts', `Control+${itemNumber} Space`);
   }
@@ -430,16 +647,36 @@ function createItemElement(topic, list, item) {
     selectShortcutList(list.id);
     selectShortcutItem(itemNumber - 1);
   });
+  configureSortable(row, {
+    type: 'item', parentId: list.id, id: item.id, items: list.items,
+  });
 
   detailsToggle.addEventListener('click', () => {
     detailsPanel.hidden = !detailsPanel.hidden;
     detailsToggle.setAttribute('aria-expanded', String(!detailsPanel.hidden));
-    if (!detailsPanel.hidden) description.focus();
+    if (!detailsPanel.hidden) {
+      (descriptionLabel.hidden ? descriptionToggle : description).focus();
+    }
+  });
+
+  descriptionToggle.addEventListener('click', () => {
+    descriptionLabel.hidden = !descriptionLabel.hidden;
+    if (descriptionLabel.hidden) collapsedDescriptionItemIds.add(item.id);
+    else collapsedDescriptionItemIds.delete(item.id);
+    descriptionToggle.textContent = t(descriptionLabel.hidden ? 'showTaskNotes' : 'hideTaskNotes');
+    descriptionToggle.setAttribute('aria-expanded', String(!descriptionLabel.hidden));
+    if (!descriptionLabel.hidden) description.focus();
   });
 
   description.addEventListener('change', async () => {
     item.details = description.value.trim();
     await persist();
+  });
+
+  prioritySelect.addEventListener('change', async () => {
+    item.priority = prioritySelect.value;
+    await persist();
+    render();
   });
 
   stepForm.addEventListener('submit', async (event) => {
@@ -460,10 +697,30 @@ function createItemElement(topic, list, item) {
   });
 
   row.querySelector('.remove-item-button').addEventListener('click', async () => {
+    moveToTrash('item', item, list.id, list.items.indexOf(item));
     list.items = list.items.filter((candidate) => candidate.id !== item.id);
     await persist();
     render();
   });
+  return row;
+}
+
+function createArchivedItem(list, item) {
+  const row = document.createElement('li');
+  const text = document.createElement('span');
+  const restoreButton = document.createElement('button');
+  row.className = 'archive-item';
+  text.textContent = item.text;
+  restoreButton.type = 'button';
+  restoreButton.className = 'text-button';
+  restoreButton.textContent = t('restore');
+  restoreButton.setAttribute('aria-label', t('restoreTask'));
+  restoreButton.addEventListener('click', async () => {
+    item.archived = false;
+    await persist();
+    render();
+  });
+  row.append(text, restoreButton);
   return row;
 }
 
@@ -472,17 +729,24 @@ function createListElement(topic, list) {
   localizeElements(fragment);
   const card = fragment.querySelector('.checklist-card');
   const itemsElement = fragment.querySelector('.checklist-items');
-  const progress = calculateProgress(list.items);
+  const archiveItemsElement = fragment.querySelector('.archive-items');
+  const archiveCompletedButton = fragment.querySelector('.archive-completed-button');
+  const activeItems = list.items.filter((item) => !item.archived);
+  const archivedItems = list.items.filter((item) => item.archived);
+  const progress = calculateProgress(activeItems);
   card.classList.add(cardStyle(list.id));
   card.classList.toggle('keyboard-active', list.id === selectedShortcutListId);
   card.dataset.listId = list.id;
   card.addEventListener('pointerdown', () => selectShortcutList(list.id));
+  configureSortable(card, {
+    type: 'list', parentId: topic.id, id: list.id, items: topic.lists,
+  });
   fragment.querySelector('h3').textContent = list.title;
   fragment.querySelector('.list-progress .progress-track span').style.width = `${progress.percent}%`;
   fragment.querySelector('.list-progress strong').textContent = `${progress.completed}/${progress.total}`;
 
-  if (list.items.length) {
-    for (const item of list.items) itemsElement.append(createItemElement(topic, list, item));
+  if (activeItems.length) {
+    activeItems.forEach((item, index) => itemsElement.append(createItemElement(topic, list, item, index + 1)));
   } else {
     const empty = document.createElement('li');
     empty.className = 'empty-list';
@@ -490,12 +754,32 @@ function createListElement(topic, list) {
     itemsElement.append(empty);
   }
 
+  fragment.querySelector('.archive-count').textContent = `${archivedItems.length}`;
+  if (archivedItems.length) {
+    for (const item of archivedItems) archiveItemsElement.append(createArchivedItem(list, item));
+  } else {
+    const empty = document.createElement('li');
+    empty.className = 'archive-empty';
+    empty.textContent = t('archiveEmpty');
+    archiveItemsElement.append(empty);
+  }
+  archiveCompletedButton.disabled = !activeItems.some((item) => item.completed);
+  archiveCompletedButton.addEventListener('click', async () => {
+    for (const item of activeItems) {
+      if (item.completed) item.archived = true;
+    }
+    selectedShortcutItemId = null;
+    await persist();
+    render();
+  });
+
   fragment.querySelector('.delete-list-button').addEventListener('click', async () => {
     const accepted = await askToDelete(
       t('detachListTitle'),
       t('detachListMessage', { title: list.title }),
     );
     if (!accepted) return;
+    moveToTrash('list', list, topic.id, topic.lists.indexOf(list));
     topic.lists = topic.lists.filter((candidate) => candidate.id !== list.id);
     await persist();
     render();
@@ -512,7 +796,9 @@ function createListElement(topic, list) {
     event.preventDefault();
     const text = itemInput.value.trim();
     if (!text) return itemInput.focus();
-    list.items.push({ id: createId(), text, completed: false, details: '', steps: [] });
+    list.items.push({
+      id: createId(), text, completed: false, details: '', priority: 'none', archived: false, steps: [],
+    });
     await persist();
     render();
     const updatedCard = [...listsElement.querySelectorAll('.checklist-card')]
@@ -599,6 +885,7 @@ deleteTopicButton.addEventListener('click', async () => {
     t('detachTopicMessage', { title: topic.title }),
   );
   if (!accepted) return;
+  moveToTrash('topic', topic, null, workspace.topics.indexOf(topic));
   workspace.topics = workspace.topics.filter((candidate) => candidate.id !== topic.id);
   workspace.activeTopicId = workspace.topics[0]?.id || null;
   await persist();
@@ -610,14 +897,68 @@ languageSetting.addEventListener('click', () => {
   settingsLanguage = settingsLanguage === 'de' ? 'en' : 'de';
   localizeSettingsPopover();
   renderSettingsDisplays(selectedDisplay);
+  renderTrash();
 });
 
-designSelect.addEventListener('change', () => {
-  settingsDesign = normalizeDesign(designSelect.value);
+exportButton.addEventListener('click', async () => {
+  backupStatus.textContent = '';
+  try {
+    await persist();
+    const result = await globalThis.notesApp.exportWorkspace();
+    backupStatus.textContent = settingsT(result.canceled ? 'backupCanceled' : 'backupSaved');
+  } catch {
+    backupStatus.textContent = settingsT('backupFailed');
+  }
 });
+
+importButton.addEventListener('click', async () => {
+  const accepted = await askToDelete(
+    settingsT('backupRestoreTitle'),
+    settingsT('backupRestoreMessage'),
+    'restore',
+  );
+  if (!accepted) return;
+  try {
+    const result = await globalThis.notesApp.importWorkspace();
+    if (result.canceled) {
+      backupStatus.textContent = settingsT('backupCanceled');
+      return;
+    }
+    workspace = migrateWorkspace(result.workspace);
+    selectedShortcutItemId = null;
+    selectedShortcutListId = null;
+    await persist();
+    render();
+    renderTrash();
+    backupStatus.textContent = settingsT('backupRestored');
+  } catch {
+    backupStatus.textContent = settingsT('backupFailed');
+  }
+});
+
+undoButton.addEventListener('click', undoLastDelete);
+emptyTrashButton.addEventListener('click', async () => {
+  const accepted = await askToDelete(
+    settingsT('emptyTrashTitle'),
+    settingsT('emptyTrashMessage'),
+  );
+  if (!accepted) return;
+  workspace.trash = [];
+  await persist();
+  renderTrash();
+});
+
+for (const option of designOptions) {
+  option.addEventListener('change', () => {
+    if (!option.checked) return;
+    selectSettingsDesign(option.value);
+    applyDesign(settingsDesign);
+  });
+}
 
 fontSelect.addEventListener('change', () => {
   settingsFont = normalizeFont(fontSelect.value);
+  applyFont(settingsFont);
 });
 
 function previewPanelPosition() {
@@ -735,6 +1076,11 @@ function focusShortcutTarget(event, target) {
 }
 
 document.addEventListener('keydown', (event) => {
+  if (matchesModifiers(event, { control: true }) && event.code === 'KeyZ' && !isTypingTarget(event.target)) {
+    event.preventDefault();
+    undoLastDelete();
+    return;
+  }
   if (!confirmOverlay.hidden || !settingsOverlay.hidden) return;
   if (handleTaskNumberShortcut(event)) return;
   if (handleTaskNavigationShortcut(event)) return;
@@ -749,7 +1095,11 @@ document.querySelector('#open-settings-button').addEventListener('click', openSe
 globalThis.notesApp.onPanelState(({ open }) => {
   if (!open) {
     settingsOverlay.hidden = true;
-    if (openedSettings) document.documentElement.dataset.side = openedSettings.side;
+    if (openedSettings) {
+      document.documentElement.dataset.side = openedSettings.side;
+      applyDesign(openedSettings.design);
+      applyFont(openedSettings.font);
+    }
   }
   if (open && !workspace.topics.length) setTimeout(() => topicInput.focus(), 100);
 });
@@ -760,6 +1110,7 @@ globalThis.notesApp.onLanguageChanged((language) => {
 globalThis.notesApp.onDesignChanged(applyDesign);
 
 async function initialize() {
+  updateTextScale();
   await loadPanelSettings();
   const loaded = await globalThis.notesApp.loadWorkspace();
   workspace = migrateWorkspace(loaded);
@@ -767,4 +1118,5 @@ async function initialize() {
   render();
 }
 
+document.defaultView?.addEventListener('resize', updateTextScale);
 document.addEventListener('DOMContentLoaded', initialize, { once: true });
