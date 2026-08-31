@@ -27,6 +27,8 @@ app.once('ready', async () => {
     await window.webContents.executeJavaScript(`(async () => {
       document.querySelector('#open-settings-button').click();
       await new Promise((resolve) => setTimeout(resolve, 100));
+      document.querySelector('.settings-group').open = true;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
     })()`);
 
     const bounds = await window.webContents.executeJavaScript(`(() => {

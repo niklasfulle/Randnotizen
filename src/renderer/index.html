@@ -66,20 +66,28 @@
           </header>
 
           <form id="settings-form">
-            <div class="settings-field-grid">
-              <label class="settings-display-field">
-                <span data-i18n="display">Bildschirm</span>
-                <select id="display-select"></select>
-              </label>
-              <label>
-                <span data-i18n="side">Seite</span>
-                <select id="side-select">
-                  <option value="left" data-i18n="left">Links</option>
-                  <option value="right" data-i18n="right">Rechts</option>
-                </select>
-              </label>
-              <label>
-                <span data-i18n="font">Schriftart</span>
+            <details class="settings-group">
+              <summary data-i18n="settingsPosition">Position</summary>
+              <div class="settings-group-content settings-field-grid">
+                <label class="settings-display-field">
+                  <span data-i18n="display">Bildschirm</span>
+                  <select id="display-select"></select>
+                </label>
+                <label>
+                  <span data-i18n="side">Seite</span>
+                  <select id="side-select">
+                    <option value="left" data-i18n="left">Links</option>
+                    <option value="right" data-i18n="right">Rechts</option>
+                  </select>
+                </label>
+              </div>
+            </details>
+
+            <details class="settings-group">
+              <summary data-i18n="font">Schriftart</summary>
+              <div class="settings-group-content">
+                <label class="settings-single-field">
+                  <span class="visually-hidden" data-i18n="font">Schriftart</span>
                 <select id="font-select">
                   <option value="inter">Inter</option>
                   <option value="nunito-sans">Nunito Sans</option>
@@ -87,11 +95,14 @@
                   <option value="lora">Lora</option>
                   <option value="jetbrains-mono">JetBrains Mono</option>
                 </select>
-              </label>
-            </div>
+                </label>
+              </div>
+            </details>
 
-            <fieldset class="design-picker">
-              <legend data-i18n="design">Design</legend>
+            <details class="settings-group">
+              <summary data-i18n="design">Design</summary>
+              <fieldset class="settings-group-content design-picker">
+              <legend class="visually-hidden" data-i18n="design">Design</legend>
               <div class="design-options">
                 <label class="design-option">
                   <input type="radio" name="design" value="paper" aria-describedby="design-preview-hint" />
@@ -135,50 +146,59 @@
                 </label>
               </div>
               <small id="design-preview-hint" data-i18n="designPreviewHint">Auswahl sofort ansehen · dauerhaft erst nach dem Speichern</small>
-            </fieldset>
+              </fieldset>
+            </details>
 
-            <div class="settings-toggle-grid">
-              <div>
-                <p data-i18n="language">Sprache</p>
+            <details class="settings-group">
+              <summary data-i18n="language">Sprache</summary>
+              <div class="settings-group-content settings-toggle-grid">
+                <div>
                 <button id="language-setting" class="paper-toggle" type="button" aria-label="Sprache wechseln">
                   <span class="active">DE</span><i>/</i><span>EN</span>
                 </button>
-              </div>
-            </div>
-
-            <label class="autostart-note">
-              <input id="autostart-checkbox" type="checkbox" />
-              <span><b data-i18n="autostart">Mit Windows starten</b><small data-i18n="autostartHint">Randnotizen startet nach der Anmeldung automatisch im Infobereich.</small></span>
-            </label>
-            <label class="autostart-note">
-              <input id="keep-visible-checkbox" type="checkbox" />
-              <span><b data-i18n="keepVisible">Bei Fokusverlust geöffnet lassen</b><small data-i18n="keepVisibleHint">Strg + Alt + N setzt den Fokus wieder auf Randnotizen.</small></span>
-            </label>
-
-            <section class="data-tools" aria-labelledby="data-tools-title">
-              <div class="data-tools-heading">
-                <div>
-                  <p class="composer-label" data-i18n="dataManagement">DATEN & SICHERUNG</p>
-                  <h3 id="data-tools-title" data-i18n="backupTitle">Backup und Papierkorb</h3>
                 </div>
-                <span id="trash-count" class="trash-count">0</span>
               </div>
-              <div class="data-tool-actions">
-                <button id="export-button" class="secondary-button" type="button" data-i18n="createBackup">BACKUP ERSTELLEN</button>
-                <button id="import-button" class="secondary-button" type="button" data-i18n="restoreBackup">BACKUP LADEN</button>
-                <button id="undo-button" class="secondary-button" type="button" data-i18n="undoLastDelete">RÜCKGÄNGIG</button>
+            </details>
+
+            <details class="settings-group">
+              <summary data-i18n="settingsBehavior">Start & Verhalten</summary>
+              <div class="settings-group-content settings-behavior">
+                <label class="autostart-note">
+                  <input id="autostart-checkbox" type="checkbox" />
+                  <span><b data-i18n="autostart">Mit Windows starten</b><small data-i18n="autostartHint">Randnotizen startet nach der Anmeldung automatisch im Infobereich.</small></span>
+                </label>
+                <label class="autostart-note">
+                  <input id="keep-visible-checkbox" type="checkbox" />
+                  <span><b data-i18n="keepVisible">Bei Fokusverlust geöffnet lassen</b><small data-i18n="keepVisibleHint">Strg + Alt + N setzt den Fokus wieder auf Randnotizen.</small></span>
+                </label>
               </div>
-              <div id="trash-list" class="trash-list"></div>
-              <button id="empty-trash-button" class="text-button danger-text" type="button" data-i18n="emptyTrash">PAPIERKORB LEEREN</button>
-              <output id="backup-status" class="save-status" aria-live="polite"></output>
-            </section>
+            </details>
+
+            <details class="settings-group">
+              <summary><span data-i18n="dataManagement">DATEN & SICHERUNG</span><span id="trash-count" class="trash-count">0</span></summary>
+              <section class="settings-group-content data-tools" aria-label="Backup und Papierkorb" data-i18n-aria-label="backupTitle">
+                <div class="data-tool-actions">
+                  <button id="export-button" class="secondary-button" type="button" data-i18n="createBackup">BACKUP ERSTELLEN</button>
+                  <button id="import-button" class="secondary-button" type="button" data-i18n="restoreBackup">BACKUP LADEN</button>
+                  <button id="undo-button" class="secondary-button" type="button" data-i18n="undoLastDelete">RÜCKGÄNGIG</button>
+                </div>
+                <div id="trash-list" class="trash-list"></div>
+                <button id="empty-trash-button" class="text-button danger-text" type="button" data-i18n="emptyTrash">PAPIERKORB LEEREN</button>
+                <output id="backup-status" class="save-status" aria-live="polite"></output>
+              </section>
+            </details>
+
+            <details class="settings-group">
+              <summary data-i18n="info">Info</summary>
+              <div class="settings-group-content info-meta">
+                <p><span data-i18n="version">Version</span><strong id="version-label">–</strong></p>
+                <p><span data-i18n="installPath">Installationspfad</span><code id="install-path-label">–</code></p>
+                <p class="copyright-label" data-i18n="copyright">© 2026 Niklas Fulle</p>
+              </div>
+            </details>
 
             <footer class="settings-footer">
-              <div class="version-meta">
-                <p><span data-i18n="version">Version</span> <strong id="version-label">–</strong></p>
-                <p class="copyright-label" data-i18n="copyright">© 2026 Urheberrecht: Niklas Fulle</p>
-              </div>
-              <button class="primary" type="submit" data-i18n="saveSettings">EINSTELLUNGEN SPEICHERN</button>
+              <button class="primary" type="submit" data-i18n="saveSettings">SPEICHERN</button>
             </footer>
             <output id="save-status" class="save-status" aria-live="polite"></output>
           </form>
@@ -198,17 +218,19 @@
         </section>
       </div>
 
-      <footer class="shortcut-dock" aria-label="Tastenkombinationen" data-i18n-aria-label="shortcutsAria">
-        <p data-i18n="shortcuts">SHORTCUTS</p>
-        <div class="shortcut-grid">
-          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>Alt</kbd><i>+</i><kbd>N</kbd><b data-i18n="shortcutApp">App</b></span>
-          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>⇧</kbd><i>+</i><kbd>T</kbd><b data-i18n="shortcutTopic">Thema</b></span>
-          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>⇧</kbd><i>+</i><kbd>L</kbd><b data-i18n="shortcutList">Liste</b></span>
-          <span><kbd>Alt</kbd><i>+</i><kbd>1–9</kbd><b data-i18n="shortcutTasks">Liste wählen</b></span>
-          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>1–9</kbd><b data-i18n="shortcutSelectTask">Punkt wählen</b></span>
-          <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>↑/↓</kbd><b data-i18n="shortcutNavigateTasks">Navigieren</b></span>
-          <span><kbd data-i18n="spaceKey">Leertaste</kbd><b data-i18n="shortcutToggleTask">Abhaken</b></span>
-        </div>
+      <footer id="shortcut-dock" class="shortcut-dock">
+        <button id="shortcut-dock-toggle" class="shortcut-dock-toggle" type="button" aria-expanded="true" aria-controls="shortcut-grid" aria-label="Tastenkombinationen" data-i18n-aria-label="shortcutsAria">
+          <span class="shortcut-dock-title" data-i18n="shortcuts">SHORTCUTS</span>
+          <span id="shortcut-grid" class="shortcut-grid">
+            <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>Alt</kbd><i>+</i><kbd>N</kbd><b data-i18n="shortcutApp">App</b></span>
+            <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>⇧</kbd><i>+</i><kbd>T</kbd><b data-i18n="shortcutTopic">Thema</b></span>
+            <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>⇧</kbd><i>+</i><kbd>L</kbd><b data-i18n="shortcutList">Liste</b></span>
+            <span><kbd>Alt</kbd><i>+</i><kbd>1–9</kbd><b data-i18n="shortcutTasks">Liste wählen</b></span>
+            <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>1–9</kbd><b data-i18n="shortcutSelectTask">Punkt wählen</b></span>
+            <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>↑/↓</kbd><b data-i18n="shortcutNavigateTasks">Navigieren</b></span>
+            <span><kbd data-i18n="spaceKey">Leertaste</kbd><b data-i18n="shortcutToggleTask">Abhaken</b></span>
+          </span>
+        </button>
       </footer>
     </main>
     <template id="list-template">
@@ -245,25 +267,26 @@
               <input class="task-checkbox" type="checkbox" />
               <span class="item-text">Aufgabe</span>
             </label>
-            <span class="priority-sticker" hidden></span>
+            <div class="priority-control">
+              <button class="priority-sticker priority-none" type="button" aria-haspopup="menu" aria-expanded="false" data-i18n-aria-label="priority">Priorität</button>
+              <div class="priority-menu" role="menu" hidden>
+                <button type="button" role="menuitem" data-priority="none" data-i18n="priority">Priorität</button>
+                <button type="button" role="menuitem" data-priority="low" data-i18n="priorityLow">Niedrig</button>
+                <button type="button" role="menuitem" data-priority="medium" data-i18n="priorityMedium">Mittel</button>
+                <button type="button" role="menuitem" data-priority="high" data-i18n="priorityHigh">Hoch</button>
+              </div>
+            </div>
             <button class="remove-item-button" aria-label="Aufgabe löschen" title="Aufgabe löschen" data-i18n-aria-label="deleteTask" data-i18n-title="deleteTask">×</button>
           </div>
           <button class="item-details-toggle" type="button" data-i18n="taskDetails" data-i18n-aria-label="taskDetailsAria">DETAILS</button>
           <div class="item-details" hidden>
-            <label class="priority-field">
-              <span data-i18n="priority">Priorität</span>
-              <select class="priority-select">
-                <option value="none" data-i18n="priorityNone">Keine</option>
-                <option value="low" data-i18n="priorityLow">Niedrig</option>
-                <option value="medium" data-i18n="priorityMedium">Mittel</option>
-                <option value="high" data-i18n="priorityHigh">Hoch</option>
-              </select>
-            </label>
-            <button class="item-description-toggle" type="button" aria-expanded="true">NOTIZ AUSBLENDEN</button>
-            <label class="item-description-label">
-              <span data-i18n="taskDescription">Zusätzlicher Text</span>
-              <textarea class="item-description" maxlength="500" data-i18n-placeholder="taskDescriptionPlaceholder" placeholder="Notizen zu dieser Aufgabe …"></textarea>
-            </label>
+            <div class="item-description-section">
+              <div class="item-description-heading">
+                <span data-i18n="taskDescription">Zusätzlicher Text</span>
+                <button class="item-description-toggle" type="button" aria-expanded="true" data-i18n-aria-label="hideTaskNotes">−</button>
+              </div>
+              <textarea class="item-description" maxlength="500" data-i18n-placeholder="taskDescriptionPlaceholder" data-i18n-aria-label="taskDescription" placeholder="Notizen zu dieser Aufgabe …" aria-label="Zusätzlicher Text"></textarea>
+            </div>
             <p class="substep-heading" data-i18n="requiredSteps">BENÖTIGTE SCHRITTE</p>
             <ul class="substep-items"></ul>
             <form class="substep-form inline-form">

@@ -51,6 +51,7 @@ async function bootRenderer(loadedWorkspace) {
       return enabled;
     },
     getVersion: async () => '0.2.0',
+    getInstallPath: async () => 'C:\\Programme\\Randnotizen',
     hide: () => { callbacks.hidden = true; },
     onPanelState: (callback) => { callbacks.panelState = callback; },
     onLanguageChanged: (callback) => { callbacks.languageChanged = callback; },
@@ -123,6 +124,16 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   } = await bootRenderer(loaded);
   const { document } = dom.window;
 
+  const shortcutDock = document.querySelector('#shortcut-dock');
+  const shortcutDockToggle = document.querySelector('#shortcut-dock-toggle');
+  assert.equal(shortcutDockToggle.tagName, 'BUTTON');
+  shortcutDockToggle.click();
+  assert.equal(shortcutDock.classList.contains('collapsed'), true);
+  assert.equal(shortcutDockToggle.getAttribute('aria-expanded'), 'false');
+  shortcutDockToggle.click();
+  assert.equal(shortcutDock.classList.contains('collapsed'), false);
+  assert.equal(shortcutDockToggle.getAttribute('aria-expanded'), 'true');
+
   assert.equal(document.querySelector('#active-topic-title').textContent, 'Arbeit');
   assert.equal(document.querySelector('#topic-progress-label').textContent, '50%');
   assert.equal(document.documentElement.dataset.design, 'paper');
@@ -164,26 +175,31 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   submit(dom, '#topic-form', 'Neues Thema');
   await flush();
   assert.equal(document.querySelector('#active-topic-title').textContent, 'Neues Thema');
+  assert.equal(document.querySelector('.topic-tab.active').classList.contains('motion-enter'), true);
   assert.equal(document.activeElement, document.querySelector('#list-input'));
   submit(dom, '#list-form', 'Neue Liste');
   await flush();
   assert.equal(document.querySelector('.checklist-card h3').textContent, 'Neue Liste');
+  assert.equal(document.querySelector('.checklist-card').classList.contains('motion-enter'), true);
   assert.equal(document.activeElement, document.querySelector('.item-form input'));
   submit(dom, '.item-form', 'Erste Aufgabe');
   await flush();
   assert.equal(document.querySelector('.checklist-item .item-text').textContent, 'Erste Aufgabe');
+  assert.equal(document.querySelector('.checklist-item').classList.contains('motion-enter'), true);
   assert.equal(document.activeElement, document.querySelector('.item-form input'));
 
   document.querySelector('.item-details-toggle').click();
   const description = document.querySelector('.item-description');
   const descriptionToggle = document.querySelector('.item-description-toggle');
-  const descriptionLabel = document.querySelector('.item-description-label');
-  assert.equal(descriptionLabel.hidden, false);
+  assert.equal(description.hidden, false);
+  assert.equal(descriptionToggle.textContent, '−');
   descriptionToggle.click();
-  assert.equal(descriptionLabel.hidden, true);
+  assert.equal(description.hidden, true);
+  assert.equal(descriptionToggle.textContent, '+');
   assert.equal(descriptionToggle.getAttribute('aria-expanded'), 'false');
   descriptionToggle.click();
-  assert.equal(descriptionLabel.hidden, false);
+  assert.equal(description.hidden, false);
+  assert.equal(descriptionToggle.textContent, '−');
   assert.equal(descriptionToggle.getAttribute('aria-expanded'), 'true');
   assert.equal(document.activeElement, description);
   description.value = 'Release sorgfältig vorbereiten';
@@ -192,14 +208,26 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   submit(dom, '.substep-form', 'Smoke-Test ausführen');
   await flush();
   assert.equal(document.querySelector('.substep-text').textContent, 'Smoke-Test ausführen');
+  assert.equal(document.querySelector('.substep-item').classList.contains('motion-enter'), true);
   document.querySelector('.substep-checkbox').click();
   await flush();
   document.querySelector('.item-main-row .task-checkbox').click();
   await flush();
   assert.equal(document.querySelector('.checklist-item').classList.contains('completed'), true);
+  assert.equal(document.querySelector('.item-details').hidden, true);
+  assert.equal(document.querySelector('.item-details-toggle').getAttribute('aria-expanded'), 'false');
+  document.querySelector('.item-details-toggle').click();
   assert.equal(document.querySelector('.item-details').hidden, false);
+  assert.equal(document.querySelector('.item-description').disabled, true);
+  assert.equal(document.querySelector('.substep-form input').disabled, true);
+  assert.equal(document.querySelector('.substep-form button').disabled, true);
+  assert.equal(document.querySelector('.substep-checkbox').disabled, true);
+  assert.equal(document.querySelector('.remove-substep-button').disabled, true);
+  submit(dom, '.substep-form', 'Darf nicht ergänzt werden');
+  await flush();
   assert.equal(saved.at(-1).topics.at(-1).lists[0].items[0].details, 'Release sorgfältig vorbereiten');
   assert.equal(saved.at(-1).topics.at(-1).lists[0].items[0].steps[0].completed, true);
+  assert.equal(saved.at(-1).topics.at(-1).lists[0].items[0].steps.length, 1);
 
   document.querySelector('.remove-item-button').click();
   await flush();
@@ -220,11 +248,17 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   await flush();
   assert.equal(document.querySelector('#settings-overlay').hidden, false);
   assert.equal(document.querySelector('.settings-popover').tagName, 'DIALOG');
+  assert.equal(document.querySelectorAll('.settings-group').length, 7);
+  assert.equal([...document.querySelectorAll('.settings-group')].every((group) => !group.open), true);
+  document.querySelectorAll('.settings-group')[2].open = true;
+  assert.equal(document.querySelectorAll('.settings-group')[2].open, true);
   assert.equal(document.querySelector('#save-status').tagName, 'OUTPUT');
   assert.equal(document.querySelector('#version-label').textContent, '0.2.0');
+  assert.equal(document.querySelector('#install-path-label').textContent, 'C:\\Programme\\Randnotizen');
+  assert.equal(document.querySelector('#settings-form button[type="submit"]').textContent, 'SPEICHERN');
   assert.equal(
     document.querySelector('.copyright-label').textContent,
-    '© 2026 Urheberrecht: Niklas Fulle',
+    '© 2026 Niklas Fulle',
   );
   assert.equal(document.querySelector('#autostart-checkbox').checked, true);
   assert.match(document.querySelector('#display-select option:nth-child(2)').textContent, /Primär/);
@@ -273,7 +307,7 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   assert.equal(document.documentElement.lang, 'en');
   assert.equal(
     document.querySelector('.copyright-label').textContent,
-    '© 2026 Copyright: Niklas Fulle',
+    '© 2026 Niklas Fulle',
   );
   assert.equal(document.documentElement.dataset.theme, 'dark');
   assert.equal(document.documentElement.dataset.design, 'dark');
@@ -294,6 +328,11 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   callbacks.languageChanged('de');
   callbacks.designChanged('paper');
   callbacks.panelState({ open: true });
+  assert.equal(document.querySelector('.panel').classList.contains('panel-opening'), true);
+  callbacks.panelState({ open: false });
+  assert.equal(document.querySelector('.panel').classList.contains('panel-opening'), false);
+  callbacks.panelState({ open: true });
+  assert.equal(document.querySelector('.panel').classList.contains('panel-opening'), false);
   document.querySelector('#hide-button').click();
   assert.equal(callbacks.hidden, true);
 
@@ -331,11 +370,16 @@ test('renderer handles priorities, archives, sorting, backups and recoverable de
   const { dom, saved, backupActions } = await bootRenderer(loaded);
   const { document } = dom.window;
 
-  const priority = document.querySelector('.priority-select');
-  priority.value = 'high';
-  priority.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  const priority = document.querySelector('.priority-sticker');
+  const priorityMenu = document.querySelector('.priority-menu');
+  assert.equal(priorityMenu.hidden, true);
+  priority.click();
+  assert.equal(priorityMenu.hidden, false);
+  priorityMenu.querySelector('[data-priority="high"]').click();
   await flush();
-  assert.equal(document.querySelector('.priority-high').textContent, 'Hoch');
+  const updatedPriority = document.querySelector('.priority-sticker');
+  assert.equal(updatedPriority.classList.contains('priority-high'), true);
+  assert.equal(updatedPriority.textContent, 'Hoch');
   assert.equal(saved.at(-1).topics[0].lists[0].items[0].priority, 'high');
 
   document.querySelector('.archive-completed-button').click();
@@ -379,6 +423,44 @@ test('renderer handles priorities, archives, sorting, backups and recoverable de
   document.querySelector('#accept-confirm-button').click();
   await flush();
   assert.equal(document.querySelector('#trash-count').textContent, '0');
+});
+
+test('renderer reorders complete lists by drag and drop', async () => {
+  const loaded = {
+    version: 4,
+    activeTopicId: 'topic-a',
+    trash: [],
+    topics: [{
+      id: 'topic-a',
+      title: 'Release',
+      lists: [
+        { id: 'list-a', title: 'Plan', items: [] },
+        { id: 'list-b', title: 'Später', items: [] },
+      ],
+    }],
+  };
+  const { dom, saved } = await bootRenderer(loaded);
+  const cards = [...dom.window.document.querySelectorAll('.checklist-card')];
+  const transferred = new Map();
+  const dataTransfer = {
+    effectAllowed: 'none',
+    dropEffect: 'none',
+    setData: (type, value) => transferred.set(type, value),
+  };
+  const dragStart = new dom.window.Event('dragstart', { bubbles: true });
+  Object.defineProperty(dragStart, 'dataTransfer', { value: dataTransfer });
+  const dragOver = new dom.window.Event('dragover', { bubbles: true, cancelable: true });
+  Object.defineProperty(dragOver, 'dataTransfer', { value: dataTransfer });
+
+  cards[0].dispatchEvent(dragStart);
+  cards[1].dispatchEvent(dragOver);
+  cards[1].dispatchEvent(new dom.window.Event('drop', { bubbles: true, cancelable: true }));
+  await flush();
+
+  assert.equal(dataTransfer.effectAllowed, 'move');
+  assert.equal(dataTransfer.dropEffect, 'move');
+  assert.equal(transferred.get('text/plain'), 'list:topic-a:list-a');
+  assert.deepEqual(saved.at(-1).topics[0].lists.map((list) => list.id), ['list-b', 'list-a']);
 });
 
 test('renderer migrates legacy notes and handles empty and malformed input', async () => {

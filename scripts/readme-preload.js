@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld('notesApp', {
   getAutostart: async () => true,
   setAutostart: async (enabled) => enabled,
   getVersion: async () => '0.2.0',
+  getInstallPath: async () => 'C:\\Users\\Niklas\\AppData\\Local\\Programs\\Randnotizen',
   hide: () => undefined,
   onPanelState: (callback) => { panelCallbacks.panelState = callback; },
   onLanguageChanged: (callback) => { panelCallbacks.language = callback; },

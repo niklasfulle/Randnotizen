@@ -12,9 +12,11 @@
     "prebuild": "npm run generate:icon",
     "test": "node --test",
     "test:coverage": "c8 --reporter=text --reporter=lcov --check-coverage --lines 80 --functions 80 --branches 80 node --test",
+    "test:drag": "electron scripts/list-drag-repro.js",
     "test:hotkeys": "electron scripts/hotkey-repro.js",
     "test:layout": "electron scripts/layout-repro.js",
     "build": "electron-builder --win portable",
+    "installer": "electron-builder --win nsis",
     "dist": "electron-builder --win nsis"
   },
   "devDependencies": {
@@ -27,7 +29,7 @@
   "build": {
     "appId": "de.randnotizen.app",
     "productName": "Randnotizen",
-    "copyright": "© 2026 Urheberrecht: Niklas Fulle",
+    "copyright": "© 2026 Niklas Fulle",
     "directories": {
       "output": "release"
     },
@@ -43,8 +45,17 @@
       ]
     },
     "nsis": {
+      "artifactName": "Randnotizen Setup ${version}.${ext}",
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Randnotizen",
+      "uninstallDisplayName": "Randnotizen",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
     }
   }
 }

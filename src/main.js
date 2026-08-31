@@ -70,11 +70,12 @@ function panelBounds(settings = panelSettings) {
 }
 
 function setPanelState(open) {
+  const stateChanged = isOpen !== open;
   isOpen = open;
   if (!panel || panel.isDestroyed()) return;
 
-  panel.webContents.send('panel-state', { open });
   if (!open) {
+    if (stateChanged) panel.webContents.send('panel-state', { open: false });
     panel.hide();
     return;
   }
@@ -82,6 +83,7 @@ function setPanelState(open) {
   panel.setBounds(panelBounds());
   panel.setIgnoreMouseEvents(false);
   panel.show();
+  if (stateChanged) panel.webContents.send('panel-state', { open: true });
 }
 
 function togglePanel() {
@@ -219,7 +221,7 @@ function createPanel() {
   panel.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   panel.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   panel.once('ready-to-show', () => {
-    setPanelState(false);
+    showPanel();
   });
 
   panel.on('blur', () => {
@@ -272,6 +274,9 @@ function initializeApplication() {
   ipcMain.handle('autostart:get', getAutostart);
   ipcMain.handle('autostart:set', setAutostart);
   ipcMain.handle('app:version', () => app.getVersion());
+  ipcMain.handle('app:install-path', () => path.dirname(
+    process.env.PORTABLE_EXECUTABLE_FILE || process.execPath,
+  ));
   ipcMain.on('panel:hide', () => setPanelState(false));
   const repositionPanel = () => {
     setPanelState(isOpen);
@@ -282,7 +287,16 @@ function initializeApplication() {
   screen.on('display-removed', repositionPanel);
 }
 
-app.once('ready', initializeApplication);
+const ownsSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (ownsSingleInstanceLock) {
+  app.once('ready', initializeApplication);
+  app.on('second-instance', () => {
+    if (panel && !panel.isDestroyed()) showPanel();
+  });
+} else {
+  app.quit();
+}
 
 app.on('will-quit', () => {
   workspaceStore?.close();

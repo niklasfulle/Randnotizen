@@ -1,6 +1,6 @@
 # Randnotizen
 
-Eine native Desktop-Notizleiste für Windows, die am Bildschirmrand lebt und sich jederzeit per Tastenkombination ein- oder ausblenden lässt.
+Eine native Desktop-Notizleiste für Windows, die am Bildschirmrand lebt und sich jederzeit per Tastenkombination ein- oder ausblenden lässt. Beim Programmstart gleitet sie passend zur gewählten Seite in den Bildschirm und verschwindet beim Ausblenden wieder vollständig.
 
 Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer verspielten Collage-Optik. Die Anwendung läuft lokal, speichert ihre Daten auf dem Rechner und bleibt über das Symbol im Windows-Infobereich erreichbar.
 
@@ -27,7 +27,11 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 - Deutsche und englische Benutzeroberfläche
 - Optionaler automatischer Start mit Windows
 - Einstellungs-Popover mit Versionsanzeige
+- Einklappbare Shortcut-Übersicht direkt am unteren Fensterrand
+- Kurze, aufeinander abgestimmte Animationen für Programmstart, Dialoge und neue Inhalte
+- Rücksicht auf die Windows-Einstellung zum Reduzieren von Animationen
 - Windows-Infobereich, globaler Hotkey und eigenes Anwendungsicon
+- Schutz vor mehreren gleichzeitig gestarteten Instanzen
 - Transaktionale lokale SQLite-Speicherung ohne Benutzerkonto oder Cloud-Zwang
 
 ## Tastatursteuerung
@@ -44,6 +48,8 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 | `Strg + Z` | Zuletzt gelöschtes Thema, Liste, Aufgabe oder Teilschritt wiederherstellen |
 
 Die Pfeilnavigation besitzt feste Enden: Am ersten oder letzten Punkt wird nicht zur gegenüberliegenden Seite gesprungen.
+
+Die Shortcut-Übersicht am unteren Rand lässt sich durch Anklicken nach unten schieben. Eine kleine Kante bleibt sichtbar und öffnet die Übersicht beim nächsten Klick wieder. Sie kann außerdem mit `Tab` fokussiert und mit `Enter` oder `Leertaste` bedient werden.
 
 ## Aufgabendetails und Schritte
 
@@ -68,8 +74,8 @@ Backups bleiben vollständig lokal. Randnotizen überträgt keine Notizen an ein
 
 Über die Schaltfläche **Einstellungen** öffnet sich ein Popover direkt über dem Hauptpanel. Es entsteht dadurch kein zusätzliches Windows-Fenster und kein weiterer Taskleisten-Eintrag.
 
-- Änderungen an Bildschirm und Seite werden sofort als Vorschau gezeigt, aber erst mit **Einstellungen speichern** dauerhaft übernommen.
-- Die acht Designs erscheinen als anklickbare Vorschaukarten. Die Auswahl wird sofort auf die App angewendet, aber erst mit **Einstellungen speichern** dauerhaft übernommen; Schließen oder `Esc` stellt das gespeicherte Design wieder her.
+- Änderungen an Bildschirm und Seite werden sofort als Vorschau gezeigt, aber erst mit **Speichern** dauerhaft übernommen. Die Startanimation läuft genau einmal pro Programmstart und wird weder durch diese Vorschau noch durch das Speichern oder erneute Einblenden ausgelöst.
+- Die acht Designs erscheinen als anklickbare Vorschaukarten. Die Auswahl wird sofort auf die App angewendet, aber erst mit **Speichern** dauerhaft übernommen; Schließen oder `Esc` stellt das gespeicherte Design wieder her.
 - Für den normalen App-Text stehen Inter, Nunito Sans, Atkinson Hyperlegible, Lora und JetBrains Mono bereit. Die Schrift wird bei der Auswahl sofort als Vorschau angewendet und erst beim Speichern dauerhaft übernommen. Alle Schriftdateien werden mit Randnotizen ausgeliefert und funktionieren dadurch vollständig offline.
 - Die Textgröße passt sich automatisch an die verfügbare Monitorhöhe an: Bereits auf kleineren Bildschirmen gilt eine gut lesbare Mindestskalierung, auf größeren Monitoren wächst sie stufenlos weiter.
 - **Bei Fokusverlust geöffnet lassen** verhindert das automatische Ausblenden. `Strg + Alt + N` setzt dann den Fokus wieder auf Randnotizen.
@@ -78,18 +84,26 @@ Backups bleiben vollständig lokal. Randnotizen überträgt keine Notizen an ein
 
 ![Randnotizen Einstellungs-Popover](docs/images/randnotizen-settings.png)
 
-> Wird die portable EXE nach dem Aktivieren des Autostarts verschoben, sollte der Autostart in den Einstellungen einmal aus- und wieder eingeschaltet werden.
+> Wird die portable EXE nach dem Aktivieren des Autostarts verschoben, sollte der Autostart in den Einstellungen einmal aus- und wieder eingeschaltet werden. Bei der installierten Version bleibt der Pfad bei normalen Updates stabil.
 
 ## Installation
 
-Randnotizen ist für Windows gebaut. Die portable Version benötigt keine klassische Installation:
+Randnotizen ist für Windows 10 und Windows 11 gebaut. Empfohlen wird die Installation über das Setup:
 
-1. `Randnotizen <Version>.exe` herunterladen oder selbst bauen.
-2. Die EXE an einem dauerhaften Ort ablegen.
-3. Anwendung starten.
+1. `Randnotizen Setup <Version>.exe` herunterladen oder selbst erstellen.
+2. Setup ausführen und bei Bedarf den Installationsordner auswählen.
+3. Randnotizen über das Startmenü oder die Desktop-Verknüpfung starten.
 4. Mit `Strg + Alt + N` ein- und ausblenden.
 
-Nach dem Start bleibt Randnotizen über das Symbol im Windows-Infobereich erreichbar.
+Beim ersten Start wird das Panel sichtbar geöffnet. Danach bleibt Randnotizen über das Symbol im Windows-Infobereich erreichbar. Ein erneuter Programmstart öffnet die bereits laufende Instanz, statt ein zweites Fenster zu erzeugen.
+
+Alternativ steht mit `Randnotizen <Version>.exe` eine portable Ausgabe ohne Installation zur Verfügung.
+
+### Manuelles Update
+
+Eine neue Setup-Datei kann direkt über die vorhandene Installation installiert werden. Anwendungsdateien werden aktualisiert, während Einstellungen, SQLite-Datenbank und Backups erhalten bleiben. Für eine portable Installation wird die bisherige EXE durch die neue Version ersetzt.
+
+Die Builds sind derzeit nicht mit einem kommerziellen Code-Signing-Zertifikat signiert. Windows kann deshalb beim ersten Start einen SmartScreen- oder Herausgeberhinweis anzeigen.
 
 ## Entwicklung
 
@@ -117,6 +131,12 @@ NSIS-Installer erstellen:
 npm run dist
 ```
 
+Alternativ steht dafür derselbe Installer-Build unter folgendem Namen bereit:
+
+```powershell
+npm run installer
+```
+
 Die fertigen Dateien werden im Ordner `release/` abgelegt.
 
 ## Tests und Coverage
@@ -137,12 +157,20 @@ Aktueller Stand von Version 0.2.0:
 
 | Messwert | Abdeckung |
 | --- | ---: |
-| Zeilen | 96,36 % |
-| Branches | 84,78 % |
-| Funktionen | 97,72 % |
+| Zeilen | 96,37 % |
+| Branches | 84,71 % |
+| Funktionen | 97,77 % |
 
 Der HTML-/LCOV-Bericht wird unter `coverage/` erzeugt. SonarQube liest `coverage/lcov.info` über die Konfiguration in `sonar-project.properties` ein.
-Aktuell decken 21 automatisierte Tests Renderer, Hauptprozess, Hotkeys, Backup/Restore, Papierkorb, Sortierung, Archiv, Prioritäten, Layout, eingebettete Fonts, Icons, Übersetzungen und SQLite-Migration ab.
+Aktuell decken 23 automatisierte Tests Renderer, Hauptprozess, Hotkeys, Backup/Restore, Papierkorb, Sortierung einschließlich vollständiger Listen, Archiv, Prioritäten, Animationstrigger, Layout, eingebettete Fonts, Icons, Übersetzungen und SQLite-Migration ab. Ein zusätzlicher nativer Electron-Test bildet die vollständige Drag-and-drop-Ereigniskette einer Liste ab.
+
+Die nativen Hotkey-, Drag-and-drop- und Layout-Prüfungen lassen sich separat starten:
+
+```powershell
+npm run test:hotkeys
+npm run test:drag
+npm run test:layout
+```
 
 ## SonarQube
 
@@ -184,7 +212,7 @@ src/
    └─ styles.css           Collage-Design für Hauptpanel und Popover
 
 tests/                     Unit- und UI-Tests
-scripts/                   Icon-, Screenshot- und Diagnosewerkzeuge
+scripts/                   Icon-, Screenshot-, Layout- und Drag-and-drop-Prüfungen
 docs/images/               Bilder für diese README
 ```
 
@@ -202,3 +230,9 @@ Beim ersten Start mit SQLite gilt folgende Migration:
 4. Die ursprünglichen JSON-Dateien bleiben unverändert erhalten und können als Rückfallebene gesichert oder später manuell entfernt werden.
 
 Die Einstellungen bleiben bewusst in der kleinen, menschenlesbaren `settings.json`. Randnotizen benötigt weiterhin weder ein Konto noch eine Internetverbindung für den normalen Betrieb. Verwendet wird das in der Electron-Laufzeit enthaltene [`node:sqlite`](https://nodejs.org/api/sqlite.html); dadurch ist keine zusätzliche native SQLite-Abhängigkeit erforderlich.
+
+## Version und Urheberrecht
+
+Aktuelle Version: **0.2.0**
+
+**© 2026 Niklas Fulle**

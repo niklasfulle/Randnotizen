@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('notesApp', {
   getAutostart: () => ipcRenderer.invoke('autostart:get'),
   setAutostart: (enabled) => ipcRenderer.invoke('autostart:set', enabled),
   getVersion: () => ipcRenderer.invoke('app:version'),
+  getInstallPath: () => ipcRenderer.invoke('app:install-path'),
   hide: () => ipcRenderer.send('panel:hide'),
   onPanelState: (callback) => ipcRenderer.on('panel-state', (_event, state) => callback(state)),
   onLanguageChanged: (callback) => ipcRenderer.on('language:changed', (_event, language) => callback(language)),

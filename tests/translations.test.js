@@ -47,10 +47,13 @@ test('translates interface text in German and English', () => {
   assert.equal(translate('de', 'darkTheme'), 'Dunkel');
   assert.equal(translate('en', 'darkTheme'), 'Dark');
   assert.equal(translate('de', 'designNewspaper'), 'Zeitung');
+  assert.equal(translate('de', 'saveSettings'), 'SPEICHERN');
+  assert.equal(translate('en', 'saveSettings'), 'SAVE');
+  assert.equal(translate('de', 'installPath'), 'Installationspfad');
   assert.equal(translate('de', 'hideTaskNotes'), 'NOTIZ AUSBLENDEN');
   assert.equal(translate('en', 'showTaskNotes'), 'SHOW NOTE');
-  assert.equal(translate('de', 'copyright'), '© 2026 Urheberrecht: Niklas Fulle');
-  assert.equal(translate('en', 'copyright'), '© 2026 Copyright: Niklas Fulle');
+  assert.equal(translate('de', 'copyright'), '© 2026 Niklas Fulle');
+  assert.equal(translate('en', 'copyright'), '© 2026 Niklas Fulle');
 });
 
 test('interpolates translated dynamic text', () => {

@@ -16,6 +16,7 @@ const listTemplate = document.querySelector('#list-template');
 const itemTemplate = document.querySelector('#item-template');
 const settingsOverlay = document.querySelector('#settings-overlay');
 const settingsForm = document.querySelector('#settings-form');
+const settingsGroups = [...settingsForm.querySelectorAll('.settings-group')];
 const displaySelect = document.querySelector('#display-select');
 const sideSelect = document.querySelector('#side-select');
 const designOptions = [...document.querySelectorAll('input[name="design"]')];
@@ -24,6 +25,7 @@ const languageSetting = document.querySelector('#language-setting');
 const autostartCheckbox = document.querySelector('#autostart-checkbox');
 const keepVisibleCheckbox = document.querySelector('#keep-visible-checkbox');
 const versionLabel = document.querySelector('#version-label');
+const installPathLabel = document.querySelector('#install-path-label');
 const saveStatus = document.querySelector('#save-status');
 const backupStatus = document.querySelector('#backup-status');
 const trashCount = document.querySelector('#trash-count');
@@ -40,6 +42,9 @@ const cancelConfirmButton = document.querySelector('#cancel-confirm-button');
 const acceptConfirmButton = document.querySelector('#accept-confirm-button');
 const todayLabel = document.querySelector('#today-label');
 const themeColor = document.querySelector('#theme-color');
+const shortcutDock = document.querySelector('#shortcut-dock');
+const shortcutDockToggle = document.querySelector('#shortcut-dock-toggle');
+const panelElement = document.querySelector('.panel');
 
 const {
   normalizeLanguage,
@@ -61,7 +66,10 @@ let resolveConfirmation = null;
 let selectedShortcutListId = null;
 let selectedShortcutItemId = null;
 let dragState = null;
+let renderMotion = null;
+let hasPlayedPanelOpening = false;
 const collapsedDescriptionItemIds = new Set();
+const collapsedDetailItemIds = new Set();
 
 function textScaleForHeight(viewportHeight) {
   return Math.min(1.42, Math.max(1.25, 1.05 + (viewportHeight / 6000)));
@@ -200,11 +208,12 @@ function renderSettingsDisplays(selectedId) {
 }
 
 async function openSettingsPopover() {
-  const [settings, displays, autostart, version] = await Promise.all([
+  const [settings, displays, autostart, version, installPath] = await Promise.all([
     globalThis.notesApp.getSettings(),
     globalThis.notesApp.listDisplays(),
     globalThis.notesApp.getAutostart(),
     globalThis.notesApp.getVersion(),
+    globalThis.notesApp.getInstallPath(),
   ]);
   settingsLanguage = normalizeLanguage(settings.language);
   selectSettingsDesign(settings.design);
@@ -216,10 +225,12 @@ async function openSettingsPopover() {
   autostartCheckbox.checked = autostart;
   keepVisibleCheckbox.checked = Boolean(settings.keepVisible);
   versionLabel.textContent = version;
+  installPathLabel.textContent = installPath;
   saveStatus.textContent = '';
   localizeSettingsPopover();
   renderSettingsDisplays(settings.displayId);
   renderTrash();
+  for (const group of settingsGroups) group.open = false;
   settingsOverlay.hidden = false;
   requestAnimationFrame(() => closeSettingsButton.focus());
 }
@@ -438,6 +449,10 @@ function configureSortable(element, { type, parentId, id, items }) {
   element.draggable = true;
   element.addEventListener('dragstart', (event) => {
     event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', `${type}:${parentId}:${id}`);
+    }
     dragState = { type, parentId, id };
     element.classList.add('dragging');
   });
@@ -445,6 +460,7 @@ function configureSortable(element, { type, parentId, id, items }) {
     if (dragState?.type !== type || dragState.parentId !== parentId) return;
     event.stopPropagation();
     event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
     element.classList.add('drag-over');
   });
   element.addEventListener('dragleave', () => element.classList.remove('drag-over'));
@@ -552,6 +568,7 @@ function renderTopics() {
     button.type = 'button';
     button.className = `topic-tab ${cardStyle(topic.id)}`;
     button.classList.toggle('active', topic.id === workspace.activeTopicId);
+    button.classList.toggle('motion-enter', renderMotion?.type === 'topic-change' && topic.id === workspace.activeTopicId);
     button.textContent = topic.title;
     configureSortable(button, {
       type: 'topic', parentId: 'workspace', id: topic.id, items: workspace.topics,
@@ -559,6 +576,7 @@ function renderTopics() {
     button.addEventListener('click', async () => {
       workspace.activeTopicId = topic.id;
       selectedShortcutItemId = null;
+      renderMotion = { type: 'topic-change' };
       await persist();
       render();
     });
@@ -571,6 +589,7 @@ function createStepElement(item, step) {
   row.className = 'substep-item';
   row.dataset.stepId = step.id;
   row.classList.toggle('completed', step.completed);
+  row.classList.toggle('motion-enter', renderMotion?.type === 'step-add' && renderMotion.id === step.id);
   const label = document.createElement('label');
   const checkbox = document.createElement('input');
   const text = document.createElement('span');
@@ -578,11 +597,13 @@ function createStepElement(item, step) {
   checkbox.type = 'checkbox';
   checkbox.className = 'task-checkbox substep-checkbox';
   checkbox.checked = step.completed;
+  checkbox.disabled = item.completed;
   text.className = 'substep-text';
   text.textContent = step.text;
   removeButton.type = 'button';
   removeButton.className = 'remove-substep-button';
   removeButton.textContent = '×';
+  removeButton.disabled = item.completed;
   removeButton.setAttribute('aria-label', t('deleteStep'));
   removeButton.title = t('deleteStep');
   label.append(checkbox, text);
@@ -592,11 +613,13 @@ function createStepElement(item, step) {
   });
 
   checkbox.addEventListener('change', async () => {
+    if (item.completed) return;
     step.completed = checkbox.checked;
     await persist();
     render();
   });
   removeButton.addEventListener('click', async () => {
+    if (item.completed) return;
     moveToTrash('step', step, item.id, item.steps.indexOf(step));
     item.steps = item.steps.filter((candidate) => candidate.id !== step.id);
     await persist();
@@ -605,37 +628,51 @@ function createStepElement(item, step) {
   return row;
 }
 
+function closePriorityMenus() {
+  for (const menu of document.querySelectorAll('.priority-menu:not([hidden])')) {
+    menu.hidden = true;
+    menu.closest('.priority-control')?.querySelector('.priority-sticker')
+      ?.setAttribute('aria-expanded', 'false');
+  }
+}
+
 function createItemElement(topic, list, item, itemNumber) {
   const row = itemTemplate.content.querySelector('.checklist-item').cloneNode(true);
   localizeElements(row);
   const checkbox = row.querySelector('.task-checkbox');
   const number = row.querySelector('.item-number');
   const text = row.querySelector('.item-text');
+  const priorityControl = row.querySelector('.priority-control');
   const prioritySticker = row.querySelector('.priority-sticker');
-  const prioritySelect = row.querySelector('.priority-select');
+  const priorityMenu = row.querySelector('.priority-menu');
   const detailsToggle = row.querySelector('.item-details-toggle');
   const detailsPanel = row.querySelector('.item-details');
   const descriptionToggle = row.querySelector('.item-description-toggle');
-  const descriptionLabel = row.querySelector('.item-description-label');
   const description = row.querySelector('.item-description');
   const stepsElement = row.querySelector('.substep-items');
   const stepForm = row.querySelector('.substep-form');
   const stepInput = stepForm.querySelector('input');
+  const stepSubmitButton = stepForm.querySelector('button');
   checkbox.checked = item.completed;
   row.dataset.itemId = item.id;
   number.textContent = `${itemNumber}.`;
   text.textContent = item.text;
-  prioritySelect.value = item.priority;
-  prioritySticker.hidden = item.priority === 'none';
   prioritySticker.className = `priority-sticker priority-${item.priority}`;
-  prioritySticker.textContent = item.priority === 'none' ? '' : t(`priority${item.priority[0].toUpperCase()}${item.priority.slice(1)}`);
+  prioritySticker.textContent = item.priority === 'none'
+    ? t('priority')
+    : t(`priority${item.priority[0].toUpperCase()}${item.priority.slice(1)}`);
   row.classList.toggle('completed', item.completed);
   row.classList.toggle('keyboard-selected', item.id === selectedShortcutItemId);
+  row.classList.toggle('motion-enter', renderMotion?.type === 'item-add' && renderMotion.id === item.id);
   description.value = item.details;
-  descriptionLabel.hidden = collapsedDescriptionItemIds.has(item.id);
-  descriptionToggle.textContent = t(descriptionLabel.hidden ? 'showTaskNotes' : 'hideTaskNotes');
-  descriptionToggle.setAttribute('aria-expanded', String(!descriptionLabel.hidden));
-  detailsPanel.hidden = !(item.details || item.steps.length);
+  description.disabled = item.completed;
+  stepInput.disabled = item.completed;
+  stepSubmitButton.disabled = item.completed;
+  description.hidden = collapsedDescriptionItemIds.has(item.id);
+  descriptionToggle.textContent = description.hidden ? '+' : '−';
+  descriptionToggle.setAttribute('aria-label', t(description.hidden ? 'showTaskNotes' : 'hideTaskNotes'));
+  descriptionToggle.setAttribute('aria-expanded', String(!description.hidden));
+  detailsPanel.hidden = collapsedDetailItemIds.has(item.id) || !(item.details || item.steps.length);
   detailsToggle.setAttribute('aria-expanded', String(!detailsPanel.hidden));
   for (const step of item.steps) stepsElement.append(createStepElement(item, step));
   if (list.id === selectedShortcutListId && itemNumber <= 9) {
@@ -651,39 +688,70 @@ function createItemElement(topic, list, item, itemNumber) {
     type: 'item', parentId: list.id, id: item.id, items: list.items,
   });
 
+  priorityControl.addEventListener('pointerdown', (event) => event.stopPropagation());
+  prioritySticker.addEventListener('click', () => {
+    const shouldOpen = priorityMenu.hidden;
+    closePriorityMenus();
+    priorityMenu.hidden = !shouldOpen;
+    prioritySticker.setAttribute('aria-expanded', String(shouldOpen));
+    if (shouldOpen) {
+      priorityMenu.querySelector(`[data-priority="${item.priority}"]`)?.focus();
+    }
+  });
+  priorityControl.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || priorityMenu.hidden) return;
+    event.preventDefault();
+    closePriorityMenus();
+    prioritySticker.focus();
+  });
+  for (const option of priorityMenu.querySelectorAll('[data-priority]')) {
+    option.addEventListener('click', async () => {
+      item.priority = option.dataset.priority;
+      closePriorityMenus();
+      await persist();
+      render();
+    });
+  }
+
   detailsToggle.addEventListener('click', () => {
     detailsPanel.hidden = !detailsPanel.hidden;
+    detailsPanel.classList.toggle('motion-reveal', !detailsPanel.hidden);
+    if (detailsPanel.hidden) collapsedDetailItemIds.add(item.id);
+    else collapsedDetailItemIds.delete(item.id);
     detailsToggle.setAttribute('aria-expanded', String(!detailsPanel.hidden));
     if (!detailsPanel.hidden) {
-      (descriptionLabel.hidden ? descriptionToggle : description).focus();
+      (description.hidden ? descriptionToggle : description).focus();
     }
   });
 
   descriptionToggle.addEventListener('click', () => {
-    descriptionLabel.hidden = !descriptionLabel.hidden;
-    if (descriptionLabel.hidden) collapsedDescriptionItemIds.add(item.id);
+    description.hidden = !description.hidden;
+    description.classList.toggle('motion-reveal', !description.hidden);
+    if (description.hidden) collapsedDescriptionItemIds.add(item.id);
     else collapsedDescriptionItemIds.delete(item.id);
-    descriptionToggle.textContent = t(descriptionLabel.hidden ? 'showTaskNotes' : 'hideTaskNotes');
-    descriptionToggle.setAttribute('aria-expanded', String(!descriptionLabel.hidden));
-    if (!descriptionLabel.hidden) description.focus();
+    descriptionToggle.textContent = description.hidden ? '+' : '−';
+    descriptionToggle.setAttribute('aria-label', t(description.hidden ? 'showTaskNotes' : 'hideTaskNotes'));
+    descriptionToggle.setAttribute('aria-expanded', String(!description.hidden));
+    if (!description.hidden) description.focus();
   });
 
   description.addEventListener('change', async () => {
+    if (item.completed) {
+      description.value = item.details;
+      return;
+    }
     item.details = description.value.trim();
     await persist();
   });
 
-  prioritySelect.addEventListener('change', async () => {
-    item.priority = prioritySelect.value;
-    await persist();
-    render();
-  });
-
   stepForm.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (item.completed) return;
     const stepText = stepInput.value.trim();
     if (!stepText) return stepInput.focus();
-    item.steps.push({ id: createId(), text: stepText, completed: false });
+    const step = { id: createId(), text: stepText, completed: false };
+    item.steps.push(step);
+    renderMotion = { type: 'step-add', id: step.id };
     await persist();
     render();
     const updatedRow = listsElement.querySelector(`[data-item-id="${item.id}"]`);
@@ -692,6 +760,8 @@ function createItemElement(topic, list, item, itemNumber) {
 
   checkbox.addEventListener('change', async () => {
     item.completed = checkbox.checked;
+    if (item.completed) collapsedDetailItemIds.add(item.id);
+    else collapsedDetailItemIds.delete(item.id);
     await persist();
     render();
   });
@@ -724,7 +794,7 @@ function createArchivedItem(list, item) {
   return row;
 }
 
-function createListElement(topic, list) {
+function createListElement(topic, list, listIndex = 0) {
   const fragment = listTemplate.content.cloneNode(true);
   localizeElements(fragment);
   const card = fragment.querySelector('.checklist-card');
@@ -736,6 +806,10 @@ function createListElement(topic, list) {
   const progress = calculateProgress(activeItems);
   card.classList.add(cardStyle(list.id));
   card.classList.toggle('keyboard-active', list.id === selectedShortcutListId);
+  const animateCard = renderMotion?.type === 'topic-change'
+    || (renderMotion?.type === 'list-add' && renderMotion.id === list.id);
+  card.classList.toggle('motion-enter', animateCard);
+  if (animateCard) card.style.setProperty('--motion-index', `${listIndex}`);
   card.dataset.listId = list.id;
   card.addEventListener('pointerdown', () => selectShortcutList(list.id));
   configureSortable(card, {
@@ -796,9 +870,11 @@ function createListElement(topic, list) {
     event.preventDefault();
     const text = itemInput.value.trim();
     if (!text) return itemInput.focus();
-    list.items.push({
+    const item = {
       id: createId(), text, completed: false, details: '', priority: 'none', archived: false, steps: [],
-    });
+    };
+    list.items.push(item);
+    renderMotion = { type: 'item-add', id: item.id };
     await persist();
     render();
     const updatedCard = [...listsElement.querySelectorAll('.checklist-card')]
@@ -844,12 +920,13 @@ function renderActiveTopic() {
     return;
   }
 
-  for (const list of topic.lists) listsElement.append(createListElement(topic, list));
+  topic.lists.forEach((list, index) => listsElement.append(createListElement(topic, list, index)));
 }
 
 function render() {
   renderTopics();
   renderActiveTopic();
+  renderMotion = null;
 }
 
 topicForm.addEventListener('submit', async (event) => {
@@ -859,6 +936,7 @@ topicForm.addEventListener('submit', async (event) => {
   const topic = { id: createId(), title, lists: [] };
   workspace.topics.push(topic);
   workspace.activeTopicId = topic.id;
+  renderMotion = { type: 'topic-change' };
   topicInput.value = '';
   await persist();
   render();
@@ -870,7 +948,9 @@ listForm.addEventListener('submit', async (event) => {
   const topic = activeTopic();
   const title = listInput.value.trim();
   if (!topic || !title) return listInput.focus();
-  topic.lists.push({ id: createId(), title, items: [] });
+  const list = { id: createId(), title, items: [] };
+  topic.lists.push(list);
+  renderMotion = { type: 'list-add', id: list.id };
   listInput.value = '';
   await persist();
   render();
@@ -1089,17 +1169,34 @@ document.addEventListener('keydown', (event) => {
   focusShortcutTarget(event, inputShortcutTarget(event));
 });
 
+document.addEventListener('pointerdown', (event) => {
+  if (!event.target.closest('.priority-control')) closePriorityMenus();
+});
+
+function toggleShortcutDock() {
+  const collapsed = shortcutDock.classList.toggle('collapsed');
+  shortcutDockToggle.setAttribute('aria-expanded', String(!collapsed));
+}
+
+shortcutDockToggle.addEventListener('click', toggleShortcutDock);
+
 document.querySelector('#hide-button').addEventListener('click', globalThis.notesApp.hide);
 document.querySelector('#open-settings-button').addEventListener('click', openSettingsPopover);
 
 globalThis.notesApp.onPanelState(({ open }) => {
   if (!open) {
+    panelElement.classList.remove('panel-opening');
     settingsOverlay.hidden = true;
     if (openedSettings) {
       document.documentElement.dataset.side = openedSettings.side;
       applyDesign(openedSettings.design);
       applyFont(openedSettings.font);
     }
+  }
+  if (open && !hasPlayedPanelOpening) {
+    hasPlayedPanelOpening = true;
+    panelElement.classList.remove('panel-opening');
+    requestAnimationFrame(() => requestAnimationFrame(() => panelElement.classList.add('panel-opening')));
   }
   if (open && !workspace.topics.length) setTimeout(() => topicInput.focus(), 100);
 });

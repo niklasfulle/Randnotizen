@@ -15,6 +15,11 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
     { id: 2, label: 'Zweiter Monitor', workArea: { x: 1920, y: 0, width: 2560, height: 1440 } },
   ];
   const app = new EventEmitter();
+  app.singleInstanceLockRequests = 0;
+  app.requestSingleInstanceLock = () => {
+    app.singleInstanceLockRequests += 1;
+    return true;
+  };
   app.getPath = () => userData;
   app.exit = (code) => { app.exitCode = code; };
   app.getVersion = () => '0.2.0';
@@ -89,6 +94,7 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
     Module._load = originalLoad;
   }
 
+  assert.equal(app.singleInstanceLockRequests, 1);
   app.emit('ready');
   const panel = FakeBrowserWindow.instance;
   const tray = FakeTray.instance;
@@ -97,7 +103,13 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   assert.match(panel.loadedFile, /renderer[\\/]index\.html$/);
   assert.equal(tray.tooltip, 'Randnotizen · Strg + Alt + N');
 
+  assert.equal(panel.options.show, false);
+  assert.notEqual(panel.visible, true);
   panel.emit('ready-to-show');
+  assert.equal(panel.visible, true);
+  assert.equal(panel.focused, true);
+  registered['CommandOrControl+Alt+N']();
+  assert.equal(panel.visible, false);
   registered['CommandOrControl+Alt+N']();
   assert.equal(panel.visible, true);
   assert.equal(panel.focused, true);
@@ -106,6 +118,15 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   tray.emit('click');
   tray.emit('double-click');
   assert.equal(panel.visible, true);
+  panel.focused = false;
+  panel.emit('blur');
+  assert.equal(panel.visible, false);
+  tray.emit('click');
+  assert.equal(panel.visible, true);
+  panel.hide();
+  app.emit('second-instance');
+  assert.equal(panel.visible, true);
+  assert.equal(panel.focused, true);
 
   assert.equal(handlers.get('workspace:load')(), null);
   fs.writeFileSync(path.join(userData, 'notes.json'), JSON.stringify([{ title: 'Alt' }]));
@@ -129,6 +150,8 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
     displayId: '2', side: 'left',
   }), { displayId: '2', side: 'left' });
   assert.equal(handlers.get('settings:get')().displayId, 'primary');
+  const panelStateMessagesBeforeSave = panel.webContents.messages
+    .filter(([channel]) => channel === 'panel-state').length;
   const updated = handlers.get('settings:update')(null, {
     displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'lora', keepVisible: true,
   });
@@ -136,6 +159,10 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
     displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'lora', keepVisible: true,
   });
   assert.equal(panel.bounds.x, 1920);
+  assert.equal(
+    panel.webContents.messages.filter(([channel]) => channel === 'panel-state').length,
+    panelStateMessagesBeforeSave,
+  );
   assert.ok(panel.webContents.messages.some(([channel]) => channel === 'language:changed'));
   assert.ok(panel.webContents.messages.some(([channel]) => channel === 'design:changed'));
 
@@ -150,10 +177,15 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
 
   assert.deepEqual(tray.menu.map((item) => item.type || item.label), ['Open Edge Notes', 'separator', 'Exit']);
   assert.equal(handlers.get('app:version')(), '0.2.0');
+  assert.equal(
+    handlers.get('app:install-path')(),
+    path.dirname(process.env.PORTABLE_EXECUTABLE_FILE || process.execPath),
+  );
   assert.equal(handlers.get('autostart:get')(), false);
   assert.equal(handlers.get('autostart:set')(null, true), true);
   assert.equal(app.loginSettings.openAtLogin, true);
   assert.ok(app.loginSettings.path);
+  assert.equal(app.loginSettings.args, undefined);
 
   screen.emit('display-metrics-changed');
   screen.emit('display-added');
