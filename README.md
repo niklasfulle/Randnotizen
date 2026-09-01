@@ -181,12 +181,12 @@ Aktueller Stand von Version 0.2.3:
 
 | Messwert | Abdeckung |
 | --- | ---: |
-| Zeilen | 95,86 % |
-| Branches | 83,43 % |
-| Funktionen | 98,00 % |
+| Zeilen | 97,50 % |
+| Branches | 85,91 % |
+| Funktionen | 98,75 % |
 
 Der HTML-/LCOV-Bericht wird unter `coverage/` erzeugt. SonarQube liest `coverage/lcov.info` über die Konfiguration in `sonar-project.properties` ein.
-Aktuell decken 28 automatisierte Tests Renderer, Hauptprozess, Versionsnotizen, Schnellaufnahme, Live-Suche inklusive Tastaturnavigation, Fälligkeiten, Hotkeys, Backup/Restore, Papierkorb, Sortierung einschließlich vollständiger Listen, Archiv, Prioritäten, Animationstrigger, Layout, eingebettete Fonts, Icons, Übersetzungen und SQLite-Migration ab. Ein zusätzlicher nativer Electron-Test bildet die vollständige Drag-and-drop-Ereigniskette einer Liste ab.
+Aktuell decken 30 automatisierte Tests Renderer, Hauptprozess, Versionsnotizen, Schnellaufnahme, Live-Suche inklusive Tastaturnavigation, Fälligkeiten, Hotkeys, Backup/Restore einschließlich Fehlerfälle, Papierkorb, Sortierung einschließlich vollständiger Listen, Archiv, Prioritäten, Aufgaben- und Schritt-Details, Datenmigration, Animationstrigger, Layout, eingebettete Fonts, Icons, Übersetzungen und SQLite-Migration ab. Ein zusätzlicher nativer Electron-Test bildet die vollständige Drag-and-drop-Ereigniskette einer Liste ab.
 
 Die nativen Hotkey-, Drag-and-drop- und Layout-Prüfungen lassen sich separat starten:
 

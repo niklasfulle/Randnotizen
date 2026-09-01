@@ -12,7 +12,11 @@ function flush() {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-async function bootRenderer(loadedWorkspace, releaseNotes = { version: '0.2.3', dismissed: true }) {
+async function bootRenderer(
+  loadedWorkspace,
+  releaseNotes = { version: '0.2.3', dismissed: true },
+  apiOverrides = {},
+) {
   const dom = new JSDOM(html, { url: 'https://randnotizen.local/' });
   let settings = {
     displayId: 'primary', side: 'right', language: 'de', design: 'paper', font: 'inter', keepVisible: false,
@@ -66,6 +70,7 @@ async function bootRenderer(loadedWorkspace, releaseNotes = { version: '0.2.3', 
     onLanguageChanged: (callback) => { callbacks.languageChanged = callback; },
     onDesignChanged: (callback) => { callbacks.designChanged = callback; },
     onQuickCapture: (callback) => { callbacks.quickCapture = callback; },
+    ...apiOverrides,
   };
 
   globalThis.document = dom.window.document;
@@ -115,6 +120,11 @@ test('renderer shows release notes once per version and remembers dismissal', as
   }, releaseNotes);
   const { document } = dom.window;
 
+  assert.deepEqual(
+    ['.image-preview-card', '.quick-capture-card', '.release-notes-card']
+      .map((selector) => document.querySelector(selector).tagName),
+    ['DIALOG', 'DIALOG', 'DIALOG'],
+  );
   assert.equal(document.querySelector('#release-notes-overlay').hidden, false);
   assert.match(document.querySelector('#release-notes-intro').textContent, /0\.2\.3/);
   assert.equal(document.querySelectorAll('.release-note').length, 5);
@@ -581,6 +591,113 @@ test('renderer searches as you type, supports keyboard selection and saves due d
   await flush();
   assert.equal(saved.at(-1).topics[1].lists[0].items[0].dueDate, '2000-01-01');
   assert.equal(document.querySelector('.due-sticker').textContent, 'ÜBERFÄLLIG');
+});
+
+test('renderer handles empty search, task details and recoverable image errors', async () => {
+  const loaded = {
+    version: 6,
+    activeTopicId: 'topic-a',
+    trash: [],
+    topics: [{
+      id: 'topic-a', title: 'Arbeit', lists: [{
+        id: 'list-a', title: 'Heute', items: [{
+          id: 'item-a', text: 'Prüfen', completed: false, details: '', priority: 'none', archived: false,
+          image: null, dueDate: '', steps: [],
+        }],
+      }],
+    }],
+  };
+  const { dom, saved } = await bootRenderer(loaded, undefined, {
+    chooseTaskImage: async () => ({ canceled: false, error: 'unsupportedImage' }),
+  });
+  const { document } = dom.window;
+
+  const searchInput = document.querySelector('#search-input');
+  searchInput.value = 'nicht vorhanden';
+  searchInput.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  assert.equal(document.querySelector('.empty').textContent, 'Keine passenden Aufgaben gefunden.');
+  document.querySelector('#clear-search-button').click();
+  assert.equal(document.querySelector('.checklist-item .item-text').textContent, 'Prüfen');
+
+  document.querySelector('.item-image-button').click();
+  await flush();
+  assert.equal(document.querySelector('.item-image-button').title, 'Dieses Bildformat wird nicht unterstützt.');
+
+  document.querySelector('.item-details-toggle').click();
+  document.querySelector('.item-description-toggle').click();
+  assert.equal(document.querySelector('.item-description').hidden, true);
+  document.querySelector('.item-description-toggle').click();
+  assert.equal(document.querySelector('.item-description').hidden, false);
+
+  const stepForm = document.querySelector('.substep-form');
+  stepForm.querySelector('input').value = 'Erster Schritt';
+  stepForm.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+  await flush();
+  assert.equal(document.querySelectorAll('.substep-item').length, 1);
+  document.querySelector('.substep-checkbox').checked = true;
+  document.querySelector('.substep-checkbox').dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await flush();
+  document.querySelector('.remove-substep-button').click();
+  await flush();
+  assert.equal(saved.at(-1).topics[0].lists[0].items[0].steps.length, 0);
+});
+
+test('renderer sanitizes malformed data and protects failed restore and backup paths', async () => {
+  let importMode = 'canceled';
+  const { dom, saved } = await bootRenderer({
+    version: 6,
+    activeTopicId: 'missing-topic',
+    topics: [{
+      id: 'topic-a', title: '  ', lists: [{
+        id: 'list-a', title: '  ', items: [
+          null,
+          {
+            text: '  Behalten  ', completed: 'yes', details: '  Notiz  ', priority: 'invalid', archived: 0,
+            image: { dataUrl: 'data:image/png;base64,AQID' }, dueDate: 'ungültig',
+            steps: [null, { text: '  ' }, { text: '  Schritt  ', completed: 1 }],
+          },
+        ],
+      }],
+    }],
+    trash: [{
+      type: 'item', parentId: 'fehlende-liste', index: -1, value: { text: '  Verwaist  ' },
+    }],
+  }, undefined, {
+    exportWorkspace: async () => ({ canceled: true }),
+    importWorkspace: async () => {
+      if (importMode === 'throw') throw new Error('Import fehlgeschlagen');
+      return { canceled: true };
+    },
+  });
+  const { document } = dom.window;
+
+  assert.equal(document.querySelector('#active-topic-title').textContent, 'Ohne Titel');
+  assert.equal(document.querySelector('.checklist-card h3').textContent, 'Ohne Titel');
+  assert.equal(document.querySelector('.checklist-item .item-text').textContent, 'Behalten');
+  assert.equal(saved[0].topics[0].lists[0].items[0].details, 'Notiz');
+  assert.equal(saved[0].topics[0].lists[0].items[0].image.name, 'ANGEHÄNGTES BILD');
+  assert.equal(saved[0].topics[0].lists[0].items[0].dueDate, '');
+  assert.equal(saved[0].topics[0].lists[0].items[0].steps.length, 1);
+
+  document.querySelector('#open-settings-button').click();
+  await flush();
+  document.querySelector('#export-button').click();
+  await flush();
+  assert.equal(document.querySelector('#backup-status').textContent, 'Vorgang abgebrochen.');
+
+  document.querySelector('.trash-list .text-button').click();
+  await flush();
+  assert.equal(document.querySelector('#backup-status').textContent, 'Das übergeordnete Element existiert nicht mehr.');
+
+  document.querySelector('#import-button').click();
+  document.querySelector('#accept-confirm-button').click();
+  await flush();
+  assert.equal(document.querySelector('#backup-status').textContent, 'Vorgang abgebrochen.');
+  importMode = 'throw';
+  document.querySelector('#import-button').click();
+  document.querySelector('#accept-confirm-button').click();
+  await flush();
+  assert.equal(document.querySelector('#backup-status').textContent, 'Backup konnte nicht verarbeitet werden.');
 });
 
 test('renderer migrates legacy notes and handles empty and malformed input', async () => {

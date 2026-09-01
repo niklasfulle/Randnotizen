@@ -231,7 +231,7 @@
       </div>
 
       <div id="image-overlay" class="image-overlay" hidden>
-        <section class="image-preview-card" role="dialog" aria-modal="true" aria-labelledby="image-preview-title">
+        <dialog class="image-preview-card" open aria-modal="true" aria-labelledby="image-preview-title">
           <header>
             <p id="image-preview-title" class="composer-label" data-i18n="attachedImage">ANGEHÄNGTES BILD</p>
             <button id="close-image-preview-button" class="image-preview-close" type="button" aria-label="Bildvorschau schließen" data-i18n-aria-label="closeImagePreview">×</button>
@@ -241,11 +241,11 @@
           <div class="image-preview-actions">
             <button id="remove-preview-image-button" class="danger-button image-preview-remove" type="button" data-i18n="removeImage">BILD ENTFERNEN</button>
           </div>
-        </section>
+        </dialog>
       </div>
 
       <div id="quick-capture-overlay" class="quick-capture-overlay" hidden>
-        <section class="quick-capture-card" role="dialog" aria-modal="true" aria-labelledby="quick-capture-title">
+        <dialog class="quick-capture-card" open aria-modal="true" aria-labelledby="quick-capture-title">
           <header>
             <div>
               <p class="composer-label" data-i18n="quickCapture">SCHNELLAUFNAHME</p>
@@ -265,11 +265,11 @@
             <p id="quick-capture-empty" hidden data-i18n="quickCaptureEmpty">Lege zuerst eine Liste an.</p>
             <button id="quick-capture-submit" class="primary" type="submit" data-i18n="quickCaptureSave">HINZUFÜGEN</button>
           </form>
-        </section>
+        </dialog>
       </div>
 
       <div id="release-notes-overlay" class="release-notes-overlay" hidden>
-        <section class="release-notes-card" role="dialog" aria-modal="true" aria-labelledby="release-notes-title">
+        <dialog class="release-notes-card" open aria-modal="true" aria-labelledby="release-notes-title">
           <header>
             <div>
               <p class="composer-label" data-i18n="releaseNotesEyebrow">UPDATE-NOTIZ</p>
@@ -283,7 +283,7 @@
             <input id="release-notes-dismiss-checkbox" type="checkbox" />
             <span data-i18n="releaseNotesDismiss">Bei nächsten Starts dieser Version nicht mehr anzeigen</span>
           </label>
-        </section>
+        </dialog>
       </div>
 
       <footer id="shortcut-dock" class="shortcut-dock">

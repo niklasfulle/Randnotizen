@@ -978,7 +978,6 @@ html[data-theme="dark"] .checklist-item.completed .item-text { color: #b4bec3; o
 html[data-theme="dark"] .item-details { border-color: #7f909c; }
 html[data-theme="dark"] .item-details-toggle,
 html[data-theme="dark"] .item-description-toggle { color: #d7d1c5; }
-html[data-theme="dark"] .search-form { border-color: #7f909c; }
 html[data-theme="dark"] .search-form { border: 1px solid #7f909c; padding: 5px 7px; background: #111a22; }
 html[data-theme="dark"] .search-form label { color: #d9ff61; }
 html[data-theme="dark"] .due-date-field > span { color: #b4bec3; }
