@@ -6,6 +6,15 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 
 ![Randnotizen Hauptansicht](docs/images/randnotizen-panel.png)
 
+![Randnotizen Live-Suche](docs/images/randnotizen-search.png)
+
+## Neu in 0.2.2
+
+- Bildanhänge bleiben klein an der Aufgabe und öffnen sich erst als Vorschau; das Entfernen erfolgt direkt in dieser Vorschau.
+- Die Live-Suche durchforstet Themen, Listen, Aufgaben, Zusatztexte und Schritte. `Strg + F`, `↑` / `↓` und `Enter` ermöglichen die Bedienung komplett per Tastatur.
+- Fälligkeitsdaten werden direkt in den Aufgabendetails gepflegt und als kontrastreiche Sticker in allen Designs dargestellt.
+- Sechs weitere offline verfügbare Schriften erweitern die Live-Vorschau in den Einstellungen: Scoutie Sans, Betània Patmos, Playfair Display, Ubuntu, Space Grotesk und IBM Plex Mono.
+
 ## Funktionen
 
 - Themen mit beliebig vielen eigenen Listen
@@ -13,6 +22,9 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 - Frei sortierbare Themen, Listen, Aufgaben und Teilschritte per Drag-and-drop
 - Prioritäts-Sticker in drei Stufen
 - Zusätzliche Aufgabentexte und kleine Schrittlisten
+- Lokale Bildanhänge pro Aufgabe mit platzsparender Bildvorschau
+- Themenübergreifende Live-Suche mit Tastaturnavigation
+- Fälligkeiten mit Stickern für Datum, heute und überfällige Aufgaben
 - Listenarchiv für erledigte Aufgaben mit Wiederherstellung
 - Persistenter Papierkorb und schnelles Rückgängig mit `Strg + Z`
 - Lokale JSON-Backups zum Exportieren und Wiederherstellen
@@ -41,6 +53,7 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 | `Strg + Alt + N` | Ein-/ausblenden; bei sichtbarer App ohne Fokus den Fokus zurückholen |
 | `Strg + Umschalt + T` | Eingabefeld für ein neues Thema fokussieren |
 | `Strg + Umschalt + L` | Eingabefeld für eine neue Liste fokussieren |
+| `Strg + F` | Suche fokussieren und Suchtext markieren |
 | `Alt + 1–9` | Entsprechende Liste auswählen |
 | `Strg + 1–9` | Entsprechend nummerierte Aufgabe der ausgewählten Liste markieren |
 | `Strg + ↑ / ↓` | Innerhalb der Aufgaben navigieren |
@@ -49,11 +62,13 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 
 Die Pfeilnavigation besitzt feste Enden: Am ersten oder letzten Punkt wird nicht zur gegenüberliegenden Seite gesprungen.
 
+In der Suche aktualisieren sich die Treffer bei jedem Zeichen. Mit `↑` und `↓` lässt sich ein Treffer wählen; `Enter` springt anschließend direkt zu dessen Aufgabe.
+
 Die Shortcut-Übersicht am unteren Rand lässt sich durch Anklicken nach unten schieben. Eine kleine Kante bleibt sichtbar und öffnet die Übersicht beim nächsten Klick wieder. Sie kann außerdem mit `Tab` fokussiert und mit `Enter` oder `Leertaste` bedient werden.
 
 ## Aufgabendetails und Schritte
 
-Jede Aufgabe kann über **Details** einen zusätzlichen Text und beliebig viele benötigte Schritte erhalten. Die Schritte lassen sich unabhängig voneinander abhaken. Wird die übergeordnete Aufgabe abgeschlossen, bleiben die Informationen erhalten und werden mit einem roten X als erledigt markiert.
+Jede Aufgabe kann über **Details** einen zusätzlichen Text, ein Fälligkeitsdatum und beliebig viele benötigte Schritte erhalten. Die Schritte lassen sich unabhängig voneinander abhaken. Wird die übergeordnete Aufgabe abgeschlossen, bleiben die Informationen erhalten und werden mit einem roten X als erledigt markiert. Fälligkeiten erscheinen als kleine Sticker direkt an der Aufgabe: mit Datum, „Heute“ oder „Überfällig“. Über das kleine Bild-Icon an einer Aufgabe lässt sich ein PNG-, JPEG-, GIF- oder WebP-Bild (bis 5 MB) lokal anhängen. Es bleibt in der Ansicht kompakt und öffnet erst beim Anklicken als Vorschau.
 
 Die Datenstruktur ist abwärtskompatibel: Vorhandene Aufgaben erhalten beim ersten Laden automatisch leere Detail- und Schritt-Felder.
 
@@ -66,7 +81,7 @@ Die Datenstruktur ist abwärtskompatibel: Vorhandene Aufgaben erhalten beim erst
 
 ## Backup und Wiederherstellung
 
-Im Bereich **Daten & Sicherung** des Einstellungs-Popovers lässt sich der vollständige Arbeitsbereich als lesbare JSON-Datei exportieren. Ein solches Backup enthält Themen, Listen, Aufgaben, Details, Schritte, Prioritäten, Archivstatus und Papierkorb. Beim Wiederherstellen wird das gewählte Backup geprüft, in SQLite übernommen und anschließend auf das aktuelle Datenschema migriert.
+Im Bereich **Daten & Sicherung** des Einstellungs-Popovers lässt sich der vollständige Arbeitsbereich als lesbare JSON-Datei exportieren. Ein solches Backup enthält Themen, Listen, Aufgaben, Details, Fälligkeiten, Schritte, Bildanhänge, Prioritäten, Archivstatus und Papierkorb. Beim Wiederherstellen wird das gewählte Backup geprüft, in SQLite übernommen und anschließend auf das aktuelle Datenschema migriert.
 
 Backups bleiben vollständig lokal. Randnotizen überträgt keine Notizen an einen Cloud-Dienst.
 
@@ -76,7 +91,7 @@ Backups bleiben vollständig lokal. Randnotizen überträgt keine Notizen an ein
 
 - Änderungen an Bildschirm und Seite werden sofort als Vorschau gezeigt, aber erst mit **Speichern** dauerhaft übernommen. Die Startanimation läuft genau einmal pro Programmstart und wird weder durch diese Vorschau noch durch das Speichern oder erneute Einblenden ausgelöst.
 - Die acht Designs erscheinen als anklickbare Vorschaukarten. Die Auswahl wird sofort auf die App angewendet, aber erst mit **Speichern** dauerhaft übernommen; Schließen oder `Esc` stellt das gespeicherte Design wieder her.
-- Für den normalen App-Text stehen Inter, Nunito Sans, Atkinson Hyperlegible, Lora und JetBrains Mono bereit. Die Schrift wird bei der Auswahl sofort als Vorschau angewendet und erst beim Speichern dauerhaft übernommen. Alle Schriftdateien werden mit Randnotizen ausgeliefert und funktionieren dadurch vollständig offline.
+- Für den normalen App-Text stehen Inter, Nunito Sans, Atkinson Hyperlegible, Lora, JetBrains Mono, Scoutie Sans, Betània Patmos, Playfair Display, Ubuntu, Space Grotesk und IBM Plex Mono bereit. Die Schrift wird bei der Auswahl sofort als Vorschau angewendet und erst beim Speichern dauerhaft übernommen. Alle Schriftdateien werden mit Randnotizen ausgeliefert und funktionieren dadurch vollständig offline.
 - Die Textgröße passt sich automatisch an die verfügbare Monitorhöhe an: Bereits auf kleineren Bildschirmen gilt eine gut lesbare Mindestskalierung, auf größeren Monitoren wächst sie stufenlos weiter.
 - **Bei Fokusverlust geöffnet lassen** verhindert das automatische Ausblenden. `Strg + Alt + N` setzt dann den Fokus wieder auf Randnotizen.
 - Sprache, Windows-Autostart, Version und Urheberrecht befinden sich ebenfalls an dieser zentralen Stelle.
@@ -153,16 +168,16 @@ Coverage-Bericht inklusive LCOV-Datei für SonarQube erzeugen:
 npm run test:coverage
 ```
 
-Aktueller Stand von Version 0.2.0:
+Aktueller Stand von Version 0.2.2:
 
 | Messwert | Abdeckung |
 | --- | ---: |
-| Zeilen | 96,37 % |
-| Branches | 84,71 % |
-| Funktionen | 97,77 % |
+| Zeilen | 95,86 % |
+| Branches | 83,43 % |
+| Funktionen | 98,00 % |
 
 Der HTML-/LCOV-Bericht wird unter `coverage/` erzeugt. SonarQube liest `coverage/lcov.info` über die Konfiguration in `sonar-project.properties` ein.
-Aktuell decken 23 automatisierte Tests Renderer, Hauptprozess, Hotkeys, Backup/Restore, Papierkorb, Sortierung einschließlich vollständiger Listen, Archiv, Prioritäten, Animationstrigger, Layout, eingebettete Fonts, Icons, Übersetzungen und SQLite-Migration ab. Ein zusätzlicher nativer Electron-Test bildet die vollständige Drag-and-drop-Ereigniskette einer Liste ab.
+Aktuell decken 25 automatisierte Tests Renderer, Hauptprozess, Live-Suche inklusive Tastaturnavigation, Fälligkeiten, Hotkeys, Backup/Restore, Papierkorb, Sortierung einschließlich vollständiger Listen, Archiv, Prioritäten, Animationstrigger, Layout, eingebettete Fonts, Icons, Übersetzungen und SQLite-Migration ab. Ein zusätzlicher nativer Electron-Test bildet die vollständige Drag-and-drop-Ereigniskette einer Liste ab.
 
 Die nativen Hotkey-, Drag-and-drop- und Layout-Prüfungen lassen sich separat starten:
 
@@ -205,7 +220,7 @@ src/
 ├─ tray-icon.js            Tray- und Windows-Anwendungsicon
 ├─ assets/
 │  ├─ icon.ico
-│  └─ fonts/               Eingebettete OFL-Schriften und Lizenztexte
+│  └─ fonts/               Eingebettete Schriften und Lizenztexte
 └─ renderer/
    ├─ index.html           Hauptpanel
    ├─ renderer.js          Themen-, Listen- und Tastaturlogik
@@ -216,7 +231,7 @@ scripts/                   Icon-, Screenshot-, Layout- und Drag-and-drop-Prüfun
 docs/images/               Bilder für diese README
 ```
 
-Die eingebetteten Schriftfamilien stammen aus dem offiziellen [Google-Fonts-Repository](https://github.com/google/fonts) und stehen jeweils unter der SIL Open Font License 1.1. Die zugehörigen `OFL.txt`-Dateien werden zusammen mit den Fonts unter `src/assets/fonts/` ausgeliefert.
+Die eingebetteten Schriftfamilien stammen aus dem offiziellen [Google-Fonts-Repository](https://github.com/google/fonts) oder ihren jeweiligen Open-Source-Projekten. Für alle OFL-Schriften liegt eine `OFL.txt` bei; Ubuntu wird zusammen mit seiner `UFL.txt` (Ubuntu Font Licence) ausgeliefert. Damit lassen sich alle Schriften offline verwenden.
 
 ## SQLite und Datenmigration
 
@@ -225,7 +240,7 @@ Der Arbeitsbereich wird in `workspace.sqlite` im Electron-`userData`-Verzeichnis
 Beim ersten Start mit SQLite gilt folgende Migration:
 
 1. Existiert noch kein gespeicherter SQLite-Arbeitsbereich, sucht Randnotizen zuerst nach `workspace.json` und anschließend nach der älteren `notes.json`.
-2. Die vorhandenen Daten werden durch die normale Datenmigration auf das aktuelle Schema 4 gebracht. Bestehende SQLite-Datenbanken erhalten die neuen Spalten für Priorität und Archiv automatisch.
+2. Die vorhandenen Daten werden durch die normale Datenmigration auf das aktuelle Schema 6 gebracht. Bestehende SQLite-Datenbanken erhalten neue Spalten für Priorität, Archiv, Bildanhänge und Fälligkeiten automatisch.
 3. Der migrierte Arbeitsbereich wird transaktional in `workspace.sqlite` gespeichert.
 4. Die ursprünglichen JSON-Dateien bleiben unverändert erhalten und können als Rückfallebene gesichert oder später manuell entfernt werden.
 
@@ -233,6 +248,6 @@ Die Einstellungen bleiben bewusst in der kleinen, menschenlesbaren `settings.jso
 
 ## Version und Urheberrecht
 
-Aktuelle Version: **0.2.0**
+Aktuelle Version: **0.2.2**
 
 **© 2026 Niklas Fulle**

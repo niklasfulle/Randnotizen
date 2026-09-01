@@ -50,8 +50,12 @@ async function bootRenderer(loadedWorkspace) {
       autostartUpdates.push(enabled);
       return enabled;
     },
-    getVersion: async () => '0.2.0',
+    getVersion: async () => '0.2.2',
     getInstallPath: async () => 'C:\\Programme\\Randnotizen',
+    chooseTaskImage: async () => ({
+      canceled: false,
+      image: { name: 'planung.png', dataUrl: 'data:image/png;base64,AQID' },
+    }),
     hide: () => { callbacks.hidden = true; },
     onPanelState: (callback) => { callbacks.panelState = callback; },
     onLanguageChanged: (callback) => { callbacks.languageChanged = callback; },
@@ -171,6 +175,8 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   assert.equal(document.activeElement, document.querySelector('#topic-input'));
   keydown(dom, { ctrlKey: true, shiftKey: true, code: 'KeyL' });
   assert.equal(document.activeElement, document.querySelector('#list-input'));
+  keydown(dom, { ctrlKey: true, code: 'KeyF' });
+  assert.equal(document.activeElement, document.querySelector('#search-input'));
 
   submit(dom, '#topic-form', 'Neues Thema');
   await flush();
@@ -253,7 +259,7 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   document.querySelectorAll('.settings-group')[2].open = true;
   assert.equal(document.querySelectorAll('.settings-group')[2].open, true);
   assert.equal(document.querySelector('#save-status').tagName, 'OUTPUT');
-  assert.equal(document.querySelector('#version-label').textContent, '0.2.0');
+  assert.equal(document.querySelector('#version-label').textContent, '0.2.2');
   assert.equal(document.querySelector('#install-path-label').textContent, 'C:\\Programme\\Randnotizen');
   assert.equal(document.querySelector('#settings-form button[type="submit"]').textContent, 'SPEICHERN');
   assert.equal(
@@ -361,7 +367,7 @@ test('renderer handles priorities, archives, sorting, backups and recoverable de
         id: 'list-a',
         title: 'Plan',
         items: [
-          { id: 'item-a', text: 'Bauen', completed: false, priority: 'none', archived: false, details: '', steps: [] },
+          { id: 'item-a', text: 'Bauen', completed: false, priority: 'none', archived: false, details: '', image: null, steps: [] },
           { id: 'item-b', text: 'Testen', completed: true, priority: 'medium', archived: false, details: '', steps: [] },
         ],
       }],
@@ -381,6 +387,20 @@ test('renderer handles priorities, archives, sorting, backups and recoverable de
   assert.equal(updatedPriority.classList.contains('priority-high'), true);
   assert.equal(updatedPriority.textContent, 'Hoch');
   assert.equal(saved.at(-1).topics[0].lists[0].items[0].priority, 'high');
+
+  document.querySelector('.item-image-button').click();
+  await flush();
+  assert.equal(document.querySelector('.item-image-button').classList.contains('has-image'), true);
+  assert.deepEqual(saved.at(-1).topics[0].lists[0].items[0].image, {
+    name: 'planung.png', dataUrl: 'data:image/png;base64,AQID',
+  });
+  document.querySelector('.item-image-button').click();
+  assert.equal(document.querySelector('#image-overlay').hidden, false);
+  assert.equal(document.querySelector('#task-image-preview').getAttribute('src'), 'data:image/png;base64,AQID');
+  document.querySelector('#remove-preview-image-button').click();
+  await flush();
+  assert.equal(document.querySelector('#image-overlay').hidden, true);
+  assert.equal(saved.at(-1).topics[0].lists[0].items[0].image, null);
 
   document.querySelector('.archive-completed-button').click();
   await flush();
@@ -463,6 +483,52 @@ test('renderer reorders complete lists by drag and drop', async () => {
   assert.deepEqual(saved.at(-1).topics[0].lists.map((list) => list.id), ['list-b', 'list-a']);
 });
 
+test('renderer searches as you type, supports keyboard selection and saves due dates', async () => {
+  const loaded = {
+    version: 6,
+    activeTopicId: 'topic-a',
+    trash: [],
+    topics: [
+      {
+        id: 'topic-a', title: 'Arbeit', lists: [{
+          id: 'list-a', title: 'Heute', items: [{
+            id: 'item-a', text: 'Rechnung prüfen', completed: false, details: '', priority: 'none', archived: false, image: null, dueDate: '', steps: [],
+          }],
+        }],
+      },
+      {
+        id: 'topic-b', title: 'Privat', lists: [{
+          id: 'list-b', title: 'Später', items: [{
+            id: 'item-b', text: 'Einkaufen', completed: false, details: 'Milch prüfen', priority: 'none', archived: false, image: null, dueDate: '', steps: [],
+          }],
+        }],
+      },
+    ],
+  };
+  const { dom, saved } = await bootRenderer(loaded);
+  const { document } = dom.window;
+  const searchInput = document.querySelector('#search-input');
+
+  searchInput.value = 'Milch';
+  searchInput.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+  assert.equal(document.querySelector('#list-section-label').textContent, 'SUCHERGEBNISSE');
+  assert.equal(document.querySelectorAll('.search-result').length, 1);
+  searchInput.dispatchEvent(new dom.window.KeyboardEvent('keydown', { bubbles: true, code: 'ArrowDown' }));
+  assert.equal(document.activeElement.classList.contains('search-result'), true);
+  document.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { bubbles: true, code: 'Enter' }));
+  await flush();
+  assert.equal(document.querySelector('#active-topic-title').textContent, 'Privat');
+  assert.equal(document.querySelector('.checklist-item .item-text').textContent, 'Einkaufen');
+
+  document.querySelector('.item-details-toggle').click();
+  const dueDate = document.querySelector('.due-date-input');
+  dueDate.value = '2000-01-01';
+  dueDate.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  await flush();
+  assert.equal(saved.at(-1).topics[1].lists[0].items[0].dueDate, '2000-01-01');
+  assert.equal(document.querySelector('.due-sticker').textContent, 'ÜBERFÄLLIG');
+});
+
 test('renderer migrates legacy notes and handles empty and malformed input', async () => {
   const legacyNotes = [
     { title: 'Alt', content: 'Inhalt' },
@@ -471,7 +537,7 @@ test('renderer migrates legacy notes and handles empty and malformed input', asy
   const { dom, saved } = await bootRenderer(legacyNotes);
   const { document } = dom.window;
 
-  assert.equal(saved[0].version, 4);
+  assert.equal(saved[0].version, 6);
   assert.deepEqual(saved[0].topics[0].lists[0].items[0].steps, []);
   assert.equal(document.querySelectorAll('.checklist-item').length, 2);
   assert.match(document.querySelector('.checklist-item .item-text').textContent, /Alt/);

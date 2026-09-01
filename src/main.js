@@ -11,6 +11,14 @@ const { createWorkspaceStore } = require('./workspace-store');
 const PANEL_WIDTH = 520;
 const HOTKEY = 'CommandOrControl+Alt+N';
 const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
+const TASK_IMAGE_MIME_TYPES = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+};
+const MAX_TASK_IMAGE_BYTES = 5 * 1024 * 1024;
 
 let panel;
 let tray;
@@ -146,6 +154,29 @@ async function importWorkspace() {
   return { canceled: false, workspace: workspaceStore.loadWorkspace() };
 }
 
+async function chooseTaskImage() {
+  const result = await dialog.showOpenDialog(panel, {
+    title: 'Bild an Aufgabe anhängen',
+    properties: ['openFile'],
+    filters: [{ name: 'Bilder', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }],
+  });
+  if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
+
+  const imagePath = result.filePaths[0];
+  const mimeType = TASK_IMAGE_MIME_TYPES[path.extname(imagePath).toLowerCase()];
+  if (!mimeType) return { canceled: false, error: 'unsupportedImage' };
+
+  const data = fs.readFileSync(imagePath);
+  if (data.length > MAX_TASK_IMAGE_BYTES) return { canceled: false, error: 'imageTooLarge' };
+  return {
+    canceled: false,
+    image: {
+      name: path.basename(imagePath),
+      dataUrl: `data:${mimeType};base64,${data.toString('base64')}`,
+    },
+  };
+}
+
 function listDisplays() {
   const primaryId = screen.getPrimaryDisplay().id;
   return screen.getAllDisplays().map((display, index) => ({
@@ -267,6 +298,7 @@ function initializeApplication() {
   ipcMain.handle('workspace:save', saveWorkspace);
   ipcMain.handle('workspace:export', exportWorkspace);
   ipcMain.handle('workspace:import', importWorkspace);
+  ipcMain.handle('task-image:choose', chooseTaskImage);
   ipcMain.handle('settings:get', () => panelSettings);
   ipcMain.handle('settings:update', updatePanelSettings);
   ipcMain.handle('settings:preview-position', previewPanelPosition);

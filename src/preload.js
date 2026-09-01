@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('notesApp', {
   saveWorkspace: (workspace) => ipcRenderer.invoke('workspace:save', workspace),
   exportWorkspace: () => ipcRenderer.invoke('workspace:export'),
   importWorkspace: () => ipcRenderer.invoke('workspace:import'),
+  chooseTaskImage: () => ipcRenderer.invoke('task-image:choose'),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   updateSettings: (settings) => ipcRenderer.invoke('settings:update', settings),
   previewPosition: (position) => ipcRenderer.invoke('settings:preview-position', position),

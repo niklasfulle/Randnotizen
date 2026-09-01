@@ -46,6 +46,7 @@ test('preload exposes the complete renderer API and forwards IPC events', async 
   await exposedApi.saveWorkspace(workspace);
   await exposedApi.exportWorkspace();
   await exposedApi.importWorkspace();
+  await exposedApi.chooseTaskImage();
   await exposedApi.getSettings();
   await exposedApi.updateSettings(settings);
   await exposedApi.previewPosition(settings);
@@ -61,6 +62,7 @@ test('preload exposes the complete renderer API and forwards IPC events', async 
     ['workspace:save', workspace],
     ['workspace:export', undefined],
     ['workspace:import', undefined],
+    ['task-image:choose', undefined],
     ['settings:get', undefined],
     ['settings:update', settings],
     ['settings:preview-position', settings],

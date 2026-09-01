@@ -46,6 +46,26 @@ const messagePairs = {
   newTask: ['Neue Aufgabe', 'New task'],
   addTask: ['Aufgabe hinzufügen', 'Add task'],
   deleteTask: ['Aufgabe löschen', 'Delete task'],
+  search: ['Suchen', 'Search'],
+  searchPlaceholder: ['Themen, Listen und Aufgaben durchsuchen …', 'Search topics, lists and tasks …'],
+  clearSearch: ['Suche löschen', 'Clear search'],
+  searchResults: ['SUCHERGEBNISSE', 'SEARCH RESULTS'],
+  searchResultOne: ['{count} Treffer', '{count} result'],
+  searchResultMany: ['{count} Treffer', '{count} results'],
+  noSearchResults: ['Keine passenden Aufgaben gefunden.', 'No matching tasks found.'],
+  searchShortcut: ['Suchen (Strg + F)', 'Search (Ctrl + F)'],
+  dueDate: ['FÄLLIG AM', 'DUE DATE'],
+  dueDateAria: ['Fälligkeitsdatum', 'Due date'],
+  dueToday: ['HEUTE', 'TODAY'],
+  dueOverdue: ['ÜBERFÄLLIG', 'OVERDUE'],
+  attachImage: ['Bild anhängen', 'Attach image'],
+  viewImage: ['Bild ansehen', 'View image'],
+  removeImage: ['Bild entfernen', 'Remove image'],
+  attachedImage: ['ANGEHÄNGTES BILD', 'ATTACHED IMAGE'],
+  closeImagePreview: ['Bildvorschau schließen', 'Close image preview'],
+  imagePreviewAlt: ['Angehängtes Bild: {name}', 'Attached image: {name}'],
+  unsupportedImage: ['Dieses Bildformat wird nicht unterstützt.', 'This image format is not supported.'],
+  imageTooLarge: ['Das Bild darf höchstens 5 MB groß sein.', 'The image must be no larger than 5 MB.'],
   taskDetails: ['DETAILS', 'DETAILS'],
   taskDetailsAria: ['Aufgabendetails öffnen oder schließen', 'Open or close task details'],
   taskDescription: ['Zusätzlicher Text', 'Additional text'],
@@ -170,7 +190,7 @@ function normalizeFont(font) {
     georgia: 'lora',
     courier: 'jetbrains-mono',
   };
-  const bundledFonts = ['inter', 'nunito-sans', 'atkinson', 'lora', 'jetbrains-mono'];
+  const bundledFonts = ['inter', 'nunito-sans', 'atkinson', 'lora', 'jetbrains-mono', 'scoutie-sans', 'betania-patmos', 'playfair-display', 'ubuntu', 'space-grotesk', 'ibm-plex-mono'];
   return legacyFonts[font] || (bundledFonts.includes(font) ? font : 'inter');
 }
 

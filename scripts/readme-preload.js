@@ -1,7 +1,7 @@
 const { contextBridge } = require('electron');
 
 const sampleWorkspace = {
-  version: 4,
+  version: 6,
   activeTopicId: 'topic-project',
   trash: [{
     id: 'trash-sample',
@@ -26,14 +26,15 @@ const sampleWorkspace = {
               completed: true,
               priority: 'high',
               archived: false,
+              dueDate: '2026-08-30',
               details: 'Freigabe und offene Fragen dokumentieren.',
               steps: [
                 { id: 'step-review', text: 'Review abschließen', completed: true },
                 { id: 'step-signoff', text: 'Freigabe notieren', completed: true },
               ],
             },
-            { id: 'item-testing', text: 'App gründlich testen', completed: false, priority: 'high', archived: false },
-            { id: 'item-readme', text: 'README mit Bildern schreiben', completed: false, priority: 'medium', archived: false },
+            { id: 'item-testing', text: 'App gründlich testen', completed: false, priority: 'high', archived: false, dueDate: '2026-09-01' },
+            { id: 'item-readme', text: 'README mit Bildern schreiben', completed: false, priority: 'medium', archived: false, dueDate: '2026-09-05' },
           ],
         },
         {
@@ -57,6 +58,7 @@ contextBridge.exposeInMainWorld('notesApp', {
   saveWorkspace: async () => undefined,
   exportWorkspace: async () => ({ canceled: false, filePath: 'Randnotizen-backup.json' }),
   importWorkspace: async () => ({ canceled: false, workspace: sampleWorkspace }),
+  chooseTaskImage: async () => ({ canceled: true }),
   getSettings: async () => ({
     displayId: 'primary',
     side: 'right',
@@ -73,7 +75,7 @@ contextBridge.exposeInMainWorld('notesApp', {
   ],
   getAutostart: async () => true,
   setAutostart: async (enabled) => enabled,
-  getVersion: async () => '0.2.0',
+  getVersion: async () => '0.2.2',
   getInstallPath: async () => 'C:\\Users\\Niklas\\AppData\\Local\\Programs\\Randnotizen',
   hide: () => undefined,
   onPanelState: (callback) => { panelCallbacks.panelState = callback; },

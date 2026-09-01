@@ -31,6 +31,9 @@ const SCHEMA = `
     details TEXT NOT NULL DEFAULT '',
     priority TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'low', 'medium', 'high')),
     archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)),
+    image_name TEXT NOT NULL DEFAULT '',
+    image_data TEXT NOT NULL DEFAULT '',
+    due_date TEXT NOT NULL DEFAULT '',
     sort_order INTEGER NOT NULL
   ) STRICT;
 
@@ -43,7 +46,7 @@ const SCHEMA = `
   ) STRICT;
 `;
 
-const WORKSPACE_VERSION = 4;
+const WORKSPACE_VERSION = 6;
 
 function ensureItemColumns(database) {
   const columns = new Set(database.prepare('PRAGMA table_info(items)').all().map(({ name }) => name));
@@ -52,6 +55,15 @@ function ensureItemColumns(database) {
   }
   if (!columns.has('archived')) {
     database.exec('ALTER TABLE items ADD COLUMN archived INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!columns.has('image_name')) {
+    database.exec("ALTER TABLE items ADD COLUMN image_name TEXT NOT NULL DEFAULT ''");
+  }
+  if (!columns.has('image_data')) {
+    database.exec("ALTER TABLE items ADD COLUMN image_data TEXT NOT NULL DEFAULT ''");
+  }
+  if (!columns.has('due_date')) {
+    database.exec("ALTER TABLE items ADD COLUMN due_date TEXT NOT NULL DEFAULT ''");
   }
 }
 
@@ -89,6 +101,9 @@ function insertItems(list, insertItem, insertStep) {
       typeof item.details === 'string' ? item.details : '',
       ['low', 'medium', 'high'].includes(item.priority) ? item.priority : 'none',
       Number(Boolean(item.archived)),
+      typeof item.image?.name === 'string' ? item.image.name : '',
+      typeof item.image?.dataUrl === 'string' ? item.image.dataUrl : '',
+      typeof item.dueDate === 'string' ? item.dueDate : '',
       itemIndex,
     );
     insertSteps(item, insertStep);
@@ -136,7 +151,7 @@ function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs 
     }
 
     const items = database.prepare(
-      'SELECT id, list_id, text, completed, details, priority, archived FROM items ORDER BY sort_order',
+      'SELECT id, list_id, text, completed, details, priority, archived, image_name, image_data, due_date FROM items ORDER BY sort_order',
     ).all().map((item) => ({
       id: item.id,
       text: item.text,
@@ -144,6 +159,8 @@ function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs 
       details: item.details,
       priority: item.priority,
       archived: Boolean(item.archived),
+      image: item.image_data ? { name: item.image_name, dataUrl: item.image_data } : null,
+      dueDate: item.due_date,
       steps: [],
     }));
     const itemRows = database.prepare('SELECT id, list_id FROM items ORDER BY sort_order').all();
@@ -191,7 +208,7 @@ function createWorkspaceStore({ databasePath, legacyPaths = [], fileSystem = fs 
       'INSERT INTO lists (id, topic_id, title, sort_order) VALUES (?, ?, ?, ?)',
     );
     const insertItem = database.prepare(
-      'INSERT INTO items (id, list_id, text, completed, details, priority, archived, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO items (id, list_id, text, completed, details, priority, archived, image_name, image_data, due_date, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     const insertStep = database.prepare(
       'INSERT INTO task_steps (id, item_id, text, completed, sort_order) VALUES (?, ?, ?, ?, ?)',

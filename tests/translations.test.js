@@ -35,6 +35,12 @@ test('normalizes extensible designs and app fonts', () => {
   assert.equal(themeForDesign('paper'), 'light');
   assert.equal(normalizeFont('lora'), 'lora');
   assert.equal(normalizeFont('nunito-sans'), 'nunito-sans');
+  assert.equal(normalizeFont('scoutie-sans'), 'scoutie-sans');
+  assert.equal(normalizeFont('betania-patmos'), 'betania-patmos');
+  assert.equal(normalizeFont('playfair-display'), 'playfair-display');
+  assert.equal(normalizeFont('ubuntu'), 'ubuntu');
+  assert.equal(normalizeFont('space-grotesk'), 'space-grotesk');
+  assert.equal(normalizeFont('ibm-plex-mono'), 'ibm-plex-mono');
   assert.equal(normalizeFont('georgia'), 'lora');
   assert.equal(normalizeFont('courier'), 'jetbrains-mono');
   assert.equal(normalizeFont('comic-sans'), 'inter');

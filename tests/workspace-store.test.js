@@ -30,7 +30,7 @@ test('SQLite store migrates legacy JSON without modifying the source file', (con
 
   assert.deepEqual(store.loadWorkspace(), legacyWorkspace);
   const migratedWorkspace = structuredClone(legacyWorkspace);
-  migratedWorkspace.version = 4;
+  migratedWorkspace.version = 6;
   migratedWorkspace.trash = [{
     id: 'trash-1', type: 'step', parentId: 'item-1', index: 0, deletedAt: '2026-08-31T00:00:00.000Z',
     value: { id: 'deleted-step', text: 'Dokumentieren', completed: false },
@@ -38,6 +38,10 @@ test('SQLite store migrates legacy JSON without modifying the source file', (con
   migratedWorkspace.topics[0].lists[0].items[0].details = 'Vor dem Release prüfen';
   migratedWorkspace.topics[0].lists[0].items[0].priority = 'high';
   migratedWorkspace.topics[0].lists[0].items[0].archived = true;
+  migratedWorkspace.topics[0].lists[0].items[0].image = {
+    name: 'check.png', dataUrl: 'data:image/png;base64,AQID',
+  };
+  migratedWorkspace.topics[0].lists[0].items[0].dueDate = '2030-01-02';
   migratedWorkspace.topics[0].lists[0].items[0].steps = [
     { id: 'step-1', text: 'Smoke-Test', completed: true },
   ];
@@ -58,7 +62,7 @@ test('SQLite store persists an intentionally empty workspace instead of reimport
     databasePath: path.join(directory, 'workspace.sqlite'),
     legacyPaths: [legacyPath],
   });
-  const emptyWorkspace = { version: 4, activeTopicId: null, topics: [], trash: [] };
+  const emptyWorkspace = { version: 6, activeTopicId: null, topics: [], trash: [] };
 
   store.saveWorkspace(emptyWorkspace);
 
@@ -90,9 +94,11 @@ test('SQLite store upgrades an existing schema 3 database in place', (context) =
   const store = createWorkspaceStore({ databasePath });
   const loaded = store.loadWorkspace();
 
-  assert.equal(loaded.version, 4);
+  assert.equal(loaded.version, 6);
   assert.deepEqual(loaded.trash, []);
   assert.equal(loaded.topics[0].lists[0].items[0].priority, 'none');
   assert.equal(loaded.topics[0].lists[0].items[0].archived, false);
+  assert.equal(loaded.topics[0].lists[0].items[0].image, null);
+  assert.equal(loaded.topics[0].lists[0].items[0].dueDate, '');
   store.close();
 });

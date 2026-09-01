@@ -29,6 +29,12 @@
         </form>
       </section>
 
+      <form id="search-form" class="search-form" role="search">
+        <label for="search-input"><span data-i18n="search">SUCHEN</span></label>
+        <input id="search-input" type="search" maxlength="100" placeholder="Themen, Listen und Aufgaben durchsuchen …" aria-label="Suchen" title="Suchen (Strg + F)" data-i18n-placeholder="searchPlaceholder" data-i18n-aria-label="search" data-i18n-title="searchShortcut" />
+        <button id="clear-search-button" class="clear-search-button" type="button" aria-label="Suche löschen" data-i18n-aria-label="clearSearch" hidden>×</button>
+      </form>
+
       <section id="topic-overview" class="topic-overview" aria-live="polite">
         <div class="topic-heading">
           <div>
@@ -45,7 +51,7 @@
       </section>
 
       <section class="saved-section" aria-label="Listen im gewählten Thema" data-i18n-aria-label="listsAria">
-        <div class="section-title"><span data-i18n="lists">LISTEN</span><span id="list-count"></span></div>
+        <div class="section-title"><span id="list-section-label" data-i18n="lists">LISTEN</span><span id="list-count"></span></div>
         <form id="list-form" class="inline-form list-form">
           <input id="list-input" maxlength="70" placeholder="Neue Liste …" aria-label="Neue Liste" aria-keyshortcuts="Control+Shift+L" title="Neue Liste (Strg + Umschalt + L)" data-i18n-placeholder="newList" data-i18n-aria-label="newListAria" data-i18n-title="newListShortcut" />
           <button class="primary" type="submit" data-i18n="addList">LISTE +</button>
@@ -94,6 +100,12 @@
                   <option value="atkinson">Atkinson Hyperlegible</option>
                   <option value="lora">Lora</option>
                   <option value="jetbrains-mono">JetBrains Mono</option>
+                  <option value="scoutie-sans">Scoutie Sans</option>
+                  <option value="betania-patmos">Betània Patmos</option>
+                  <option value="playfair-display">Playfair Display</option>
+                  <option value="ubuntu">Ubuntu</option>
+                  <option value="space-grotesk">Space Grotesk</option>
+                  <option value="ibm-plex-mono">IBM Plex Mono</option>
                 </select>
                 </label>
               </div>
@@ -218,6 +230,20 @@
         </section>
       </div>
 
+      <div id="image-overlay" class="image-overlay" hidden>
+        <section class="image-preview-card" role="dialog" aria-modal="true" aria-labelledby="image-preview-title">
+          <header>
+            <p id="image-preview-title" class="composer-label" data-i18n="attachedImage">ANGEHÄNGTES BILD</p>
+            <button id="close-image-preview-button" class="image-preview-close" type="button" aria-label="Bildvorschau schließen" data-i18n-aria-label="closeImagePreview">×</button>
+          </header>
+          <img id="task-image-preview" alt="" />
+          <p id="image-preview-name"></p>
+          <div class="image-preview-actions">
+            <button id="remove-preview-image-button" class="danger-button image-preview-remove" type="button" data-i18n="removeImage">BILD ENTFERNEN</button>
+          </div>
+        </section>
+      </div>
+
       <footer id="shortcut-dock" class="shortcut-dock">
         <button id="shortcut-dock-toggle" class="shortcut-dock-toggle" type="button" aria-expanded="true" aria-controls="shortcut-grid" aria-label="Tastenkombinationen" data-i18n-aria-label="shortcutsAria">
           <span class="shortcut-dock-title" data-i18n="shortcuts">SHORTCUTS</span>
@@ -266,6 +292,7 @@
               <span class="item-number">1.</span>
               <input class="task-checkbox" type="checkbox" />
               <span class="item-text">Aufgabe</span>
+              <span class="due-sticker" hidden></span>
             </label>
             <div class="priority-control">
               <button class="priority-sticker priority-none" type="button" aria-haspopup="menu" aria-expanded="false" data-i18n-aria-label="priority">Priorität</button>
@@ -276,10 +303,24 @@
                 <button type="button" role="menuitem" data-priority="high" data-i18n="priorityHigh">Hoch</button>
               </div>
             </div>
+            <div class="item-image-control">
+              <button class="item-image-button" type="button" aria-label="Bild anhängen" title="Bild anhängen" data-i18n-aria-label="attachImage" data-i18n-title="attachImage">
+                <svg class="item-image-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <rect x="3" y="4" width="15" height="13" rx="1"></rect>
+                  <circle cx="7.5" cy="8.5" r="1.25"></circle>
+                  <path d="m5 15 4-4 3 3 2-2 2 3"></path>
+                  <path class="item-image-plus" d="M20 15v6m-3-3h6"></path>
+                </svg>
+              </button>
+            </div>
             <button class="remove-item-button" aria-label="Aufgabe löschen" title="Aufgabe löschen" data-i18n-aria-label="deleteTask" data-i18n-title="deleteTask">×</button>
           </div>
           <button class="item-details-toggle" type="button" data-i18n="taskDetails" data-i18n-aria-label="taskDetailsAria">DETAILS</button>
           <div class="item-details" hidden>
+            <label class="due-date-field">
+              <span data-i18n="dueDate">FÄLLIG AM</span>
+              <input class="due-date-input" type="date" aria-label="Fälligkeitsdatum" data-i18n-aria-label="dueDateAria" />
+            </label>
             <div class="item-description-section">
               <div class="item-description-heading">
                 <span data-i18n="taskDescription">Zusätzlicher Text</span>

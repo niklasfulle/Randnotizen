@@ -22,7 +22,7 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   };
   app.getPath = () => userData;
   app.exit = (code) => { app.exitCode = code; };
-  app.getVersion = () => '0.2.0';
+  app.getVersion = () => '0.2.2';
   app.getLoginItemSettings = () => ({ openAtLogin: Boolean(app.loginSettings?.openAtLogin) });
   app.setLoginItemSettings = (settings) => { app.loginSettings = settings; };
 
@@ -131,7 +131,7 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   assert.equal(handlers.get('workspace:load')(), null);
   fs.writeFileSync(path.join(userData, 'notes.json'), JSON.stringify([{ title: 'Alt' }]));
   assert.deepEqual(handlers.get('workspace:load')(), [{ title: 'Alt' }]);
-  const workspace = { version: 4, activeTopicId: null, topics: [], trash: [] };
+  const workspace = { version: 6, activeTopicId: null, topics: [], trash: [] };
   handlers.get('workspace:save')(null, workspace);
   assert.deepEqual(handlers.get('workspace:load')(), workspace);
   assert.throws(() => handlers.get('workspace:save')(null, null), /Ungültige/);
@@ -142,6 +142,14 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   assert.deepEqual(JSON.parse(fs.readFileSync(backupPath, 'utf8')), workspace);
   openDialogResult = { canceled: false, filePaths: [backupPath] };
   assert.deepEqual((await handlers.get('workspace:import')()).workspace, workspace);
+
+  const imagePath = path.join(userData, 'task.png');
+  fs.writeFileSync(imagePath, Buffer.from([1, 2, 3]));
+  openDialogResult = { canceled: false, filePaths: [imagePath] };
+  assert.deepEqual(await handlers.get('task-image:choose')(), {
+    canceled: false,
+    image: { name: 'task.png', dataUrl: 'data:image/png;base64,AQID' },
+  });
 
   const listedDisplays = handlers.get('displays:list')();
   assert.equal(listedDisplays[0].label, 'Bildschirm 1');
@@ -176,7 +184,7 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   assert.equal(panel.visible, false);
 
   assert.deepEqual(tray.menu.map((item) => item.type || item.label), ['Open Edge Notes', 'separator', 'Exit']);
-  assert.equal(handlers.get('app:version')(), '0.2.0');
+  assert.equal(handlers.get('app:version')(), '0.2.2');
   assert.equal(
     handlers.get('app:install-path')(),
     path.dirname(process.env.PORTABLE_EXECUTABLE_FILE || process.execPath),

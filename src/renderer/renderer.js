@@ -8,9 +8,13 @@ const topicProgressBar = document.querySelector('#topic-progress-bar');
 const topicProgressLabel = document.querySelector('#topic-progress-label');
 const topicProgressDetail = document.querySelector('#topic-progress-detail');
 const deleteTopicButton = document.querySelector('#delete-topic-button');
+const searchForm = document.querySelector('#search-form');
+const searchInput = document.querySelector('#search-input');
+const clearSearchButton = document.querySelector('#clear-search-button');
 const listForm = document.querySelector('#list-form');
 const listInput = document.querySelector('#list-input');
 const listCount = document.querySelector('#list-count');
+const listSectionLabel = document.querySelector('#list-section-label');
 const listsElement = document.querySelector('#lists');
 const listTemplate = document.querySelector('#list-template');
 const itemTemplate = document.querySelector('#item-template');
@@ -40,6 +44,11 @@ const confirmTitle = document.querySelector('#confirm-title');
 const confirmMessage = document.querySelector('#confirm-message');
 const cancelConfirmButton = document.querySelector('#cancel-confirm-button');
 const acceptConfirmButton = document.querySelector('#accept-confirm-button');
+const imageOverlay = document.querySelector('#image-overlay');
+const imagePreview = document.querySelector('#task-image-preview');
+const imagePreviewName = document.querySelector('#image-preview-name');
+const closeImagePreviewButton = document.querySelector('#close-image-preview-button');
+const removePreviewImageButton = document.querySelector('#remove-preview-image-button');
 const todayLabel = document.querySelector('#today-label');
 const themeColor = document.querySelector('#theme-color');
 const shortcutDock = document.querySelector('#shortcut-dock');
@@ -68,6 +77,9 @@ let selectedShortcutItemId = null;
 let dragState = null;
 let renderMotion = null;
 let hasPlayedPanelOpening = false;
+let previewedItem = null;
+let searchQuery = '';
+let selectedSearchResultIndex = -1;
 const collapsedDescriptionItemIds = new Set();
 const collapsedDetailItemIds = new Set();
 
@@ -256,7 +268,7 @@ function createId() {
 function createDefaultWorkspace() {
   const topicId = createId();
   return {
-    version: 4,
+    version: 6,
     activeTopicId: topicId,
     topics: [{ id: topicId, title: t('general'), lists: [] }],
     trash: [],
@@ -272,6 +284,20 @@ function migrateStep(step) {
   };
 }
 
+function migrateImage(image) {
+  if (!image || typeof image.dataUrl !== 'string') return null;
+  const validDataUrl = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/u.test(image.dataUrl);
+  if (!validDataUrl || image.dataUrl.length > 7_000_000) return null;
+  return {
+    name: typeof image.name === 'string' && image.name.trim() ? image.name.trim().slice(0, 120) : t('attachedImage'),
+    dataUrl: image.dataUrl,
+  };
+}
+
+function migrateDueDate(dueDate) {
+  return typeof dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/u.test(dueDate) ? dueDate : '';
+}
+
 function migrateItem(item) {
   if (!item || typeof item.text !== 'string' || !item.text.trim()) return null;
   return {
@@ -281,6 +307,8 @@ function migrateItem(item) {
     details: typeof item.details === 'string' ? item.details.trim() : '',
     priority: ['low', 'medium', 'high'].includes(item.priority) ? item.priority : 'none',
     archived: Boolean(item.archived),
+    image: migrateImage(item.image),
+    dueDate: migrateDueDate(item.dueDate),
     steps: Array.isArray(item.steps) ? item.steps.map(migrateStep).filter(Boolean) : [],
   };
 }
@@ -324,7 +352,7 @@ function migrateWorkspace(loaded) {
 
     if (!topics.length) return createDefaultWorkspace();
     return {
-      version: 4,
+      version: 6,
       activeTopicId: topics.some((topic) => topic.id === loaded.activeTopicId)
         ? loaded.activeTopicId
         : topics[0].id,
@@ -336,7 +364,7 @@ function migrateWorkspace(loaded) {
   if (Array.isArray(loaded) && loaded.length) {
     const topicId = createId();
     return {
-      version: 4,
+      version: 6,
       activeTopicId: topicId,
       topics: [{
         id: topicId,
@@ -351,6 +379,8 @@ function migrateWorkspace(loaded) {
             details: '',
             priority: 'none',
             archived: false,
+            image: null,
+            dueDate: '',
             steps: [],
           })),
         }],
@@ -517,6 +547,29 @@ function calculateProgress(items) {
   };
 }
 
+function localDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dueDateState(dueDate) {
+  if (!dueDate) return 'none';
+  if (dueDate < localDateString()) return 'overdue';
+  if (dueDate === localDateString()) return 'today';
+  return 'upcoming';
+}
+
+function dueDateLabel(dueDate) {
+  const state = dueDateState(dueDate);
+  if (state === 'today') return t('dueToday');
+  if (state === 'overdue') return t('dueOverdue');
+  return new Intl.DateTimeFormat(currentLanguage === 'de' ? 'de-DE' : 'en-US', {
+    day: '2-digit', month: '2-digit',
+  }).format(new Date(`${dueDate}T00:00:00`));
+}
+
 function topicProgress(topic) {
   return calculateProgress(topic.lists.flatMap((list) => list.items.filter((item) => !item.archived)));
 }
@@ -548,6 +601,22 @@ function finishConfirmation(accepted) {
   resolveConfirmation = null;
   confirmOverlay.hidden = true;
   resolve(accepted);
+}
+
+function openImagePreview(item) {
+  previewedItem = item;
+  imagePreview.src = item.image.dataUrl;
+  imagePreview.alt = t('imagePreviewAlt', { name: item.image.name });
+  imagePreviewName.textContent = item.image.name;
+  removePreviewImageButton.hidden = item.completed;
+  imageOverlay.hidden = false;
+  requestAnimationFrame(() => closeImagePreviewButton.focus());
+}
+
+function closeImagePreview() {
+  imageOverlay.hidden = true;
+  imagePreview.removeAttribute('src');
+  previewedItem = null;
 }
 
 async function loadPanelSettings() {
@@ -582,6 +651,68 @@ function renderTopics() {
     });
     topicTabs.append(button);
   }
+}
+
+function searchMatches(item, list, topic, query) {
+  const searchable = [
+    topic.title,
+    list.title,
+    item.text,
+    item.details,
+    ...item.steps.map((step) => step.text),
+  ].join(' ').toLocaleLowerCase(currentLanguage);
+  return searchable.includes(query);
+}
+
+function searchResults(query) {
+  return workspace.topics.flatMap((topic) => topic.lists.flatMap((list) => list.items
+    .filter((item) => !item.archived && searchMatches(item, list, topic, query))
+    .map((item) => ({ topic, list, item }))));
+}
+
+function createSearchResultElement({ topic, list, item }) {
+  const result = document.createElement('button');
+  const eyebrow = document.createElement('span');
+  const title = document.createElement('strong');
+  const detail = document.createElement('span');
+  result.type = 'button';
+  result.className = `search-result ${cardStyle(item.id)}`;
+  eyebrow.textContent = `${topic.title} · ${list.title}`;
+  title.textContent = item.text;
+  detail.textContent = item.dueDate ? dueDateLabel(item.dueDate) : item.details || item.steps[0]?.text || '';
+  eyebrow.className = 'search-result-path';
+  detail.className = 'search-result-detail';
+  result.append(eyebrow, title, detail);
+  result.addEventListener('click', async () => {
+    workspace.activeTopicId = topic.id;
+    searchQuery = '';
+    selectedSearchResultIndex = -1;
+    searchInput.value = '';
+    clearSearchButton.hidden = true;
+    collapsedDetailItemIds.delete(item.id);
+    await persist();
+    render();
+    selectShortcutList(list.id);
+    selectShortcutItem(list.items.filter((candidate) => !candidate.archived).indexOf(item));
+  });
+  return result;
+}
+
+function renderSearchResults() {
+  const results = searchResults(searchQuery);
+  topicOverview.hidden = true;
+  listForm.hidden = true;
+  listSectionLabel.textContent = t('searchResults');
+  listCount.textContent = t(results.length === 1 ? 'searchResultOne' : 'searchResultMany', { count: results.length });
+  if (!results.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = t('noSearchResults');
+    listsElement.append(empty);
+    return;
+  }
+  for (const result of results) listsElement.append(createSearchResultElement(result));
+  selectSearchResult(selectedSearchResultIndex);
 }
 
 function createStepElement(item, step) {
@@ -645,8 +776,12 @@ function createItemElement(topic, list, item, itemNumber) {
   const priorityControl = row.querySelector('.priority-control');
   const prioritySticker = row.querySelector('.priority-sticker');
   const priorityMenu = row.querySelector('.priority-menu');
+  const imageControl = row.querySelector('.item-image-control');
+  const imageButton = row.querySelector('.item-image-button');
+  const dueSticker = row.querySelector('.due-sticker');
   const detailsToggle = row.querySelector('.item-details-toggle');
   const detailsPanel = row.querySelector('.item-details');
+  const dueDateInput = row.querySelector('.due-date-input');
   const descriptionToggle = row.querySelector('.item-description-toggle');
   const description = row.querySelector('.item-description');
   const stepsElement = row.querySelector('.substep-items');
@@ -661,6 +796,16 @@ function createItemElement(topic, list, item, itemNumber) {
   prioritySticker.textContent = item.priority === 'none'
     ? t('priority')
     : t(`priority${item.priority[0].toUpperCase()}${item.priority.slice(1)}`);
+  const hasImage = Boolean(item.image);
+  imageButton.classList.toggle('has-image', hasImage);
+  imageButton.disabled = item.completed && !hasImage;
+  imageButton.setAttribute('aria-label', t(hasImage ? 'viewImage' : 'attachImage'));
+  imageButton.setAttribute('title', t(hasImage ? 'viewImage' : 'attachImage'));
+  dueSticker.hidden = !item.dueDate;
+  dueSticker.className = `due-sticker due-${dueDateState(item.dueDate)}`;
+  dueSticker.textContent = item.dueDate ? dueDateLabel(item.dueDate) : '';
+  dueDateInput.value = item.dueDate;
+  dueDateInput.disabled = item.completed;
   row.classList.toggle('completed', item.completed);
   row.classList.toggle('keyboard-selected', item.id === selectedShortcutItemId);
   row.classList.toggle('motion-enter', renderMotion?.type === 'item-add' && renderMotion.id === item.id);
@@ -672,7 +817,7 @@ function createItemElement(topic, list, item, itemNumber) {
   descriptionToggle.textContent = description.hidden ? '+' : '−';
   descriptionToggle.setAttribute('aria-label', t(description.hidden ? 'showTaskNotes' : 'hideTaskNotes'));
   descriptionToggle.setAttribute('aria-expanded', String(!description.hidden));
-  detailsPanel.hidden = collapsedDetailItemIds.has(item.id) || !(item.details || item.steps.length);
+  detailsPanel.hidden = collapsedDetailItemIds.has(item.id) || !(item.details || item.steps.length || item.dueDate);
   detailsToggle.setAttribute('aria-expanded', String(!detailsPanel.hidden));
   for (const step of item.steps) stepsElement.append(createStepElement(item, step));
   if (list.id === selectedShortcutListId && itemNumber <= 9) {
@@ -713,6 +858,21 @@ function createItemElement(topic, list, item, itemNumber) {
     });
   }
 
+  imageControl.addEventListener('pointerdown', (event) => event.stopPropagation());
+  imageButton.addEventListener('click', async () => {
+    if (item.image) return openImagePreview(item);
+    if (item.completed) return;
+    const result = await globalThis.notesApp.chooseTaskImage();
+    const image = migrateImage(result?.image);
+    if (!image) {
+      if (result?.error) imageButton.setAttribute('title', t(result.error));
+      return;
+    }
+    item.image = image;
+    await persist();
+    render();
+  });
+
   detailsToggle.addEventListener('click', () => {
     detailsPanel.hidden = !detailsPanel.hidden;
     detailsPanel.classList.toggle('motion-reveal', !detailsPanel.hidden);
@@ -742,6 +902,16 @@ function createItemElement(topic, list, item, itemNumber) {
     }
     item.details = description.value.trim();
     await persist();
+  });
+
+  dueDateInput.addEventListener('change', async () => {
+    if (item.completed) {
+      dueDateInput.value = item.dueDate;
+      return;
+    }
+    item.dueDate = migrateDueDate(dueDateInput.value);
+    await persist();
+    render();
   });
 
   stepForm.addEventListener('submit', async (event) => {
@@ -871,7 +1041,7 @@ function createListElement(topic, list, listIndex = 0) {
     const text = itemInput.value.trim();
     if (!text) return itemInput.focus();
     const item = {
-      id: createId(), text, completed: false, details: '', priority: 'none', archived: false, steps: [],
+      id: createId(), text, completed: false, details: '', priority: 'none', archived: false, image: null, dueDate: '', steps: [],
     };
     list.items.push(item);
     renderMotion = { type: 'item-add', id: item.id };
@@ -887,9 +1057,16 @@ function createListElement(topic, list, listIndex = 0) {
 function renderActiveTopic() {
   const topic = activeTopic();
   const hasTopic = Boolean(topic);
+  listsElement.replaceChildren();
+
+  if (searchQuery) {
+    renderSearchResults();
+    return;
+  }
+
   topicOverview.hidden = !hasTopic;
   listForm.hidden = !hasTopic;
-  listsElement.replaceChildren();
+  listSectionLabel.textContent = t('lists');
 
   if (!topic) {
     listCount.textContent = '0';
@@ -928,6 +1105,24 @@ function render() {
   renderActiveTopic();
   renderMotion = null;
 }
+
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value.trim().toLocaleLowerCase(currentLanguage);
+  selectedSearchResultIndex = -1;
+  clearSearchButton.hidden = !searchQuery;
+  render();
+});
+
+clearSearchButton.addEventListener('click', () => {
+  searchInput.value = '';
+  searchQuery = '';
+  selectedSearchResultIndex = -1;
+  clearSearchButton.hidden = true;
+  render();
+  searchInput.focus();
+});
+
+searchForm.addEventListener('submit', (event) => event.preventDefault());
 
 topicForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -1084,10 +1279,22 @@ acceptConfirmButton.addEventListener('click', () => finishConfirmation(true));
 confirmOverlay.addEventListener('click', (event) => {
   if (event.target === confirmOverlay) finishConfirmation(false);
 });
+closeImagePreviewButton.addEventListener('click', closeImagePreview);
+removePreviewImageButton.addEventListener('click', async () => {
+  if (!previewedItem || previewedItem.completed) return;
+  previewedItem.image = null;
+  closeImagePreview();
+  await persist();
+  render();
+});
+imageOverlay.addEventListener('click', (event) => {
+  if (event.target === imageOverlay) closeImagePreview();
+});
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (!confirmOverlay.hidden) finishConfirmation(false);
   else if (!settingsOverlay.hidden) closeSettingsPopover();
+  else if (!imageOverlay.hidden) closeImagePreview();
 });
 
 function matchesModifiers(event, { control = false, alt = false, shift = false }) {
@@ -1095,6 +1302,9 @@ function matchesModifiers(event, { control = false, alt = false, shift = false }
 }
 
 function inputShortcutTarget(event) {
+  if (event.ctrlKey && !event.shiftKey && !event.altKey && event.code === 'KeyF') {
+    return searchInput;
+  }
   if (event.ctrlKey && event.shiftKey && !event.altKey && event.code === 'KeyT') {
     return topicInput;
   }
@@ -1107,6 +1317,32 @@ function inputShortcutTarget(event) {
   if (!card) return null;
   selectShortcutList(card.dataset.listId);
   return card.querySelector('.item-form input');
+}
+
+function selectSearchResult(index, focus = false) {
+  const results = [...listsElement.querySelectorAll('.search-result')];
+  if (!results.length) return;
+  selectedSearchResultIndex = Math.max(0, Math.min(index, results.length - 1));
+  for (const [resultIndex, result] of results.entries()) {
+    result.classList.toggle('keyboard-selected', resultIndex === selectedSearchResultIndex);
+  }
+  if (focus) results[selectedSearchResultIndex].focus();
+}
+
+function handleSearchNavigation(event) {
+  if (!searchQuery) return false;
+  if (event.code === 'ArrowDown' || event.code === 'ArrowUp') {
+    event.preventDefault();
+    const direction = event.code === 'ArrowDown' ? 1 : -1;
+    selectSearchResult(selectedSearchResultIndex + direction, true);
+    return true;
+  }
+  if (event.code === 'Enter' && (event.target === searchInput || event.target.closest?.('.search-result')) && selectedSearchResultIndex >= 0) {
+    event.preventDefault();
+    listsElement.querySelectorAll('.search-result')[selectedSearchResultIndex]?.click();
+    return true;
+  }
+  return false;
 }
 
 function handleTaskNumberShortcut(event) {
@@ -1161,7 +1397,8 @@ document.addEventListener('keydown', (event) => {
     undoLastDelete();
     return;
   }
-  if (!confirmOverlay.hidden || !settingsOverlay.hidden) return;
+  if (!confirmOverlay.hidden || !settingsOverlay.hidden || !imageOverlay.hidden) return;
+  if (handleSearchNavigation(event)) return;
   if (handleTaskNumberShortcut(event)) return;
   if (handleTaskNavigationShortcut(event)) return;
   if (handleTaskToggleShortcut(event)) return;
