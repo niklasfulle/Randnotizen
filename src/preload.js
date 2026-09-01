@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('notesApp', {
   getAutostart: () => ipcRenderer.invoke('autostart:get'),
   setAutostart: (enabled) => ipcRenderer.invoke('autostart:set', enabled),
   getVersion: () => ipcRenderer.invoke('app:version'),
+  getReleaseNotes: () => ipcRenderer.invoke('release-notes:get'),
+  dismissReleaseNotes: () => ipcRenderer.invoke('release-notes:dismiss'),
   getInstallPath: () => ipcRenderer.invoke('app:install-path'),
   hide: () => ipcRenderer.send('panel:hide'),
   onPanelState: (callback) => ipcRenderer.on('panel-state', (_event, state) => callback(state)),

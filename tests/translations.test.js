@@ -60,6 +60,8 @@ test('translates interface text in German and English', () => {
   assert.equal(translate('en', 'showTaskNotes'), 'SHOW NOTE');
   assert.equal(translate('de', 'copyright'), '© 2026 Niklas Fulle');
   assert.equal(translate('en', 'copyright'), '© 2026 Niklas Fulle');
+  assert.equal(translate('de', 'releaseNotesTitle'), 'Neu seit Version 0.2.0');
+  assert.equal(translate('en', 'releaseNotesDismiss'), 'Do not show again for this version');
 });
 
 test('interpolates translated dynamic text', () => {

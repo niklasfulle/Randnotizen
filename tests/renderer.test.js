@@ -12,7 +12,7 @@ function flush() {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-async function bootRenderer(loadedWorkspace) {
+async function bootRenderer(loadedWorkspace, releaseNotes = { version: '0.2.3', dismissed: true }) {
   const dom = new JSDOM(html, { url: 'https://randnotizen.local/' });
   let settings = {
     displayId: 'primary', side: 'right', language: 'de', design: 'paper', font: 'inter', keepVisible: false,
@@ -51,6 +51,11 @@ async function bootRenderer(loadedWorkspace) {
       return enabled;
     },
     getVersion: async () => '0.2.3',
+    getReleaseNotes: async () => ({ ...releaseNotes }),
+    dismissReleaseNotes: async () => {
+      releaseNotes.dismissed = true;
+      return { ...releaseNotes };
+    },
     getInstallPath: async () => 'C:\\Programme\\Randnotizen',
     chooseTaskImage: async () => ({
       canceled: false,
@@ -99,6 +104,26 @@ test.afterEach(() => {
   delete globalThis.RandnotizenI18n;
   delete globalThis.notesApp;
   delete globalThis.requestAnimationFrame;
+});
+
+test('renderer shows release notes once per version and remembers dismissal', async () => {
+  const releaseNotes = { version: '0.2.3', dismissed: false };
+  const { dom } = await bootRenderer({
+    version: 6,
+    activeTopicId: 'topic-a',
+    topics: [{ id: 'topic-a', title: 'Arbeit', lists: [] }],
+  }, releaseNotes);
+  const { document } = dom.window;
+
+  assert.equal(document.querySelector('#release-notes-overlay').hidden, false);
+  assert.match(document.querySelector('#release-notes-intro').textContent, /0\.2\.3/);
+  assert.equal(document.querySelectorAll('.release-note').length, 5);
+  document.querySelector('#release-notes-dismiss-checkbox').checked = true;
+  document.querySelector('#close-release-notes-button').click();
+  await flush();
+
+  assert.equal(document.querySelector('#release-notes-overlay').hidden, true);
+  assert.equal(releaseNotes.dismissed, true);
 });
 
 test('renderer adds a task to the selected list through quick capture', async () => {
@@ -367,7 +392,7 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   callbacks.panelState({ open: false });
   assert.equal(document.querySelector('.panel').classList.contains('panel-opening'), false);
   callbacks.panelState({ open: true });
-  assert.equal(document.querySelector('.panel').classList.contains('panel-opening'), false);
+  assert.equal(document.querySelector('.panel').classList.contains('panel-opening'), true);
   document.querySelector('#hide-button').click();
   assert.equal(callbacks.hidden, true);
 

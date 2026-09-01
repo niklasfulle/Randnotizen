@@ -22,7 +22,8 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   };
   app.getPath = () => userData;
   app.exit = (code) => { app.exitCode = code; };
-  app.getVersion = () => '0.2.3';
+  let appVersion = '0.2.3';
+  app.getVersion = () => appVersion;
   app.getLoginItemSettings = () => ({ openAtLogin: Boolean(app.loginSettings?.openAtLogin) });
   app.setLoginItemSettings = (settings) => { app.loginSettings = settings; };
 
@@ -168,7 +169,7 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
     displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'lora', keepVisible: true,
   });
   assert.deepEqual(updated, {
-    displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'lora', keepVisible: true,
+    displayId: '2', side: 'left', language: 'en', design: 'dark', font: 'lora', keepVisible: true, releaseNotesVersion: '',
   });
   assert.equal(panel.bounds.x, 1920);
   assert.equal(
@@ -189,6 +190,10 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
 
   assert.deepEqual(tray.menu.map((item) => item.type || item.label), ['Open Edge Notes', 'separator', 'Exit']);
   assert.equal(handlers.get('app:version')(), '0.2.3');
+  assert.deepEqual(handlers.get('release-notes:get')(), { version: '0.2.3', dismissed: false });
+  assert.deepEqual(handlers.get('release-notes:dismiss')(), { version: '0.2.3', dismissed: true });
+  appVersion = '0.2.4';
+  assert.deepEqual(handlers.get('release-notes:get')(), { version: '0.2.4', dismissed: false });
   assert.equal(
     handlers.get('app:install-path')(),
     path.dirname(process.env.PORTABLE_EXECUTABLE_FILE || process.execPath),

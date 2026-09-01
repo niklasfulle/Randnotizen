@@ -61,6 +61,11 @@ const quickCaptureInput = document.querySelector('#quick-capture-input');
 const quickCaptureEmpty = document.querySelector('#quick-capture-empty');
 const quickCaptureSubmit = document.querySelector('#quick-capture-submit');
 const closeQuickCaptureButton = document.querySelector('#close-quick-capture-button');
+const releaseNotesOverlay = document.querySelector('#release-notes-overlay');
+const releaseNotesIntro = document.querySelector('#release-notes-intro');
+const releaseNotesList = document.querySelector('#release-notes-list');
+const releaseNotesDismissCheckbox = document.querySelector('#release-notes-dismiss-checkbox');
+const closeReleaseNotesButton = document.querySelector('#close-release-notes-button');
 
 const {
   normalizeLanguage,
@@ -83,10 +88,10 @@ let selectedShortcutListId = null;
 let selectedShortcutItemId = null;
 let dragState = null;
 let renderMotion = null;
-let hasPlayedPanelOpening = false;
 let previewedItem = null;
 let searchQuery = '';
 let selectedSearchResultIndex = -1;
+let currentReleaseNotesVersion = '';
 const collapsedDescriptionItemIds = new Set();
 const collapsedDetailItemIds = new Set();
 
@@ -425,6 +430,47 @@ function openQuickCapture() {
 
 function closeQuickCapture() {
   quickCaptureOverlay.hidden = true;
+}
+
+const RELEASE_NOTE_KEYS = {
+  '0.2.3': [
+    ['releaseNotesPlanningTitle', 'releaseNotesPlanningText'],
+    ['releaseNotesTasksTitle', 'releaseNotesTasksText'],
+    ['releaseNotesWorkflowTitle', 'releaseNotesWorkflowText'],
+    ['releaseNotesAppearanceTitle', 'releaseNotesAppearanceText'],
+    ['releaseNotesWindowsTitle', 'releaseNotesWindowsText'],
+  ],
+};
+
+function renderReleaseNotes(version) {
+  releaseNotesIntro.textContent = t('releaseNotesIntro', { version });
+  releaseNotesList.replaceChildren();
+  const notes = RELEASE_NOTE_KEYS[version] || [['releaseNotesFutureTitle', 'releaseNotesFutureText']];
+  for (const [titleKey, textKey] of notes) {
+    const note = document.createElement('article');
+    const title = document.createElement('h3');
+    const text = document.createElement('p');
+    note.className = 'release-note';
+    title.textContent = t(titleKey);
+    text.textContent = t(textKey);
+    note.append(title, text);
+    releaseNotesList.append(note);
+  }
+}
+
+function openReleaseNotes({ version }) {
+  currentReleaseNotesVersion = version;
+  releaseNotesDismissCheckbox.checked = false;
+  renderReleaseNotes(version);
+  releaseNotesOverlay.hidden = false;
+  requestAnimationFrame(() => closeReleaseNotesButton.focus());
+}
+
+async function closeReleaseNotes() {
+  if (releaseNotesDismissCheckbox.checked && currentReleaseNotesVersion) {
+    await globalThis.notesApp.dismissReleaseNotes();
+  }
+  releaseNotesOverlay.hidden = true;
 }
 
 function findList(listId) {
@@ -1311,6 +1357,10 @@ confirmOverlay.addEventListener('click', (event) => {
   if (event.target === confirmOverlay) finishConfirmation(false);
 });
 closeImagePreviewButton.addEventListener('click', closeImagePreview);
+closeReleaseNotesButton.addEventListener('click', closeReleaseNotes);
+releaseNotesOverlay.addEventListener('click', (event) => {
+  if (event.target === releaseNotesOverlay) closeReleaseNotes();
+});
 closeQuickCaptureButton.addEventListener('click', closeQuickCapture);
 quickCaptureOverlay.addEventListener('click', (event) => {
   if (event.target === quickCaptureOverlay) closeQuickCapture();
@@ -1340,6 +1390,7 @@ imageOverlay.addEventListener('click', (event) => {
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (!confirmOverlay.hidden) finishConfirmation(false);
+  else if (!releaseNotesOverlay.hidden) closeReleaseNotes();
   else if (!settingsOverlay.hidden) closeSettingsPopover();
   else if (!imageOverlay.hidden) closeImagePreview();
   else if (!quickCaptureOverlay.hidden) closeQuickCapture();
@@ -1445,7 +1496,7 @@ document.addEventListener('keydown', (event) => {
     undoLastDelete();
     return;
   }
-  if (!confirmOverlay.hidden || !settingsOverlay.hidden || !imageOverlay.hidden || !quickCaptureOverlay.hidden) return;
+  if (!confirmOverlay.hidden || !releaseNotesOverlay.hidden || !settingsOverlay.hidden || !imageOverlay.hidden || !quickCaptureOverlay.hidden) return;
   if (handleSearchNavigation(event)) return;
   if (handleTaskNumberShortcut(event)) return;
   if (handleTaskNavigationShortcut(event)) return;
@@ -1478,8 +1529,7 @@ globalThis.notesApp.onPanelState(({ open }) => {
       applyFont(openedSettings.font);
     }
   }
-  if (open && !hasPlayedPanelOpening) {
-    hasPlayedPanelOpening = true;
+  if (open) {
     panelElement.classList.remove('panel-opening');
     requestAnimationFrame(() => requestAnimationFrame(() => panelElement.classList.add('panel-opening')));
   }
@@ -1487,6 +1537,7 @@ globalThis.notesApp.onPanelState(({ open }) => {
 });
 globalThis.notesApp.onLanguageChanged((language) => {
   applyLanguage(language);
+  if (!releaseNotesOverlay.hidden) renderReleaseNotes(currentReleaseNotesVersion);
   render();
 });
 globalThis.notesApp.onDesignChanged(applyDesign);
@@ -1499,6 +1550,8 @@ async function initialize() {
   workspace = migrateWorkspace(loaded);
   await persist();
   render();
+  const releaseNotes = await globalThis.notesApp.getReleaseNotes();
+  if (!releaseNotes.dismissed) openReleaseNotes(releaseNotes);
 }
 
 document.defaultView?.addEventListener('resize', updateTextScale);

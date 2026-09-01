@@ -268,6 +268,24 @@
         </section>
       </div>
 
+      <div id="release-notes-overlay" class="release-notes-overlay" hidden>
+        <section class="release-notes-card" role="dialog" aria-modal="true" aria-labelledby="release-notes-title">
+          <header>
+            <div>
+              <p class="composer-label" data-i18n="releaseNotesEyebrow">UPDATE-NOTIZ</p>
+              <h2 id="release-notes-title" data-i18n="releaseNotesTitle">Neu seit Version 0.2.0</h2>
+            </div>
+            <button id="close-release-notes-button" class="delete-button" type="button" aria-label="Versionsnotiz schließen" data-i18n-aria-label="closeReleaseNotes">×</button>
+          </header>
+          <p id="release-notes-intro" class="release-notes-intro"></p>
+          <div id="release-notes-list" class="release-notes-list"></div>
+          <label class="release-notes-dismiss">
+            <input id="release-notes-dismiss-checkbox" type="checkbox" />
+            <span data-i18n="releaseNotesDismiss">Bei nächsten Starts dieser Version nicht mehr anzeigen</span>
+          </label>
+        </section>
+      </div>
+
       <footer id="shortcut-dock" class="shortcut-dock">
         <button id="shortcut-dock-toggle" class="shortcut-dock-toggle" type="button" aria-expanded="true" aria-controls="shortcut-grid" aria-label="Tastenkombinationen" data-i18n-aria-label="shortcutsAria">
           <span class="shortcut-dock-title" data-i18n="shortcuts">SHORTCUTS</span>

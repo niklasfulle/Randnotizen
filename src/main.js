@@ -32,6 +32,7 @@ let panelSettings = {
   design: 'paper',
   font: 'inter',
   keepVisible: false,
+  releaseNotesVersion: '',
 };
 
 function t(key, variables) {
@@ -51,6 +52,7 @@ function normalizePanelSettings(settings = {}) {
     design: normalizeDesign(settings.design || legacyDesign),
     font: normalizeFont(settings.font),
     keepVisible: Boolean(settings.keepVisible),
+    releaseNotesVersion: typeof settings.releaseNotesVersion === 'string' ? settings.releaseNotesVersion : '',
   };
 }
 
@@ -196,7 +198,7 @@ function listDisplays() {
 function updatePanelSettings(_event, nextSettings) {
   const previousLanguage = panelSettings.language;
   const previousDesign = panelSettings.design;
-  panelSettings = normalizePanelSettings(nextSettings);
+  panelSettings = normalizePanelSettings({ ...panelSettings, ...nextSettings });
   saveSettings(panelSettings);
   setPanelState(isOpen);
   refreshTrayMenu();
@@ -207,6 +209,17 @@ function updatePanelSettings(_event, nextSettings) {
     panel.webContents.send('design:changed', panelSettings.design);
   }
   return panelSettings;
+}
+
+function getReleaseNotesState() {
+  const version = app.getVersion();
+  return { version, dismissed: panelSettings.releaseNotesVersion === version };
+}
+
+function dismissReleaseNotes() {
+  panelSettings = { ...panelSettings, releaseNotesVersion: app.getVersion() };
+  saveSettings(panelSettings);
+  return getReleaseNotesState();
 }
 
 function previewPanelPosition(_event, preview) {
@@ -313,6 +326,8 @@ function initializeApplication() {
   ipcMain.handle('autostart:get', getAutostart);
   ipcMain.handle('autostart:set', setAutostart);
   ipcMain.handle('app:version', () => app.getVersion());
+  ipcMain.handle('release-notes:get', getReleaseNotesState);
+  ipcMain.handle('release-notes:dismiss', dismissReleaseNotes);
   ipcMain.handle('app:install-path', () => path.dirname(
     process.env.PORTABLE_EXECUTABLE_FILE || process.execPath,
   ));

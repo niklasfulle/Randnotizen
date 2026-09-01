@@ -54,6 +54,8 @@ test('preload exposes the complete renderer API and forwards IPC events', async 
   await exposedApi.getAutostart();
   await exposedApi.setAutostart(true);
   await exposedApi.getVersion();
+  await exposedApi.getReleaseNotes();
+  await exposedApi.dismissReleaseNotes();
   await exposedApi.getInstallPath();
   exposedApi.hide();
 
@@ -70,6 +72,8 @@ test('preload exposes the complete renderer API and forwards IPC events', async 
     ['autostart:get', undefined],
     ['autostart:set', true],
     ['app:version', undefined],
+    ['release-notes:get', undefined],
+    ['release-notes:dismiss', undefined],
     ['app:install-path', undefined],
   ]);
   assert.deepEqual(sends, [['panel:hide', undefined]]);
