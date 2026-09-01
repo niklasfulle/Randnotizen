@@ -244,11 +244,36 @@
         </section>
       </div>
 
+      <div id="quick-capture-overlay" class="quick-capture-overlay" hidden>
+        <section class="quick-capture-card" role="dialog" aria-modal="true" aria-labelledby="quick-capture-title">
+          <header>
+            <div>
+              <p class="composer-label" data-i18n="quickCapture">SCHNELLAUFNAHME</p>
+              <h2 id="quick-capture-title" data-i18n="quickCaptureTitle">Aufgabe schnell erfassen</h2>
+            </div>
+            <button id="close-quick-capture-button" class="delete-button" type="button" aria-label="Schnellaufnahme schließen" data-i18n-aria-label="closeQuickCapture">×</button>
+          </header>
+          <form id="quick-capture-form">
+            <label>
+              <span data-i18n="quickCaptureList">Ziel-Liste</span>
+              <select id="quick-capture-list"></select>
+            </label>
+            <label>
+              <span class="visually-hidden" data-i18n="quickCaptureTitle">Aufgabe schnell erfassen</span>
+              <input id="quick-capture-input" maxlength="120" placeholder="Aufgabe eingeben …" aria-label="Aufgabe schnell erfassen" data-i18n-placeholder="quickCapturePlaceholder" data-i18n-aria-label="quickCaptureTitle" />
+            </label>
+            <p id="quick-capture-empty" hidden data-i18n="quickCaptureEmpty">Lege zuerst eine Liste an.</p>
+            <button id="quick-capture-submit" class="primary" type="submit" data-i18n="quickCaptureSave">HINZUFÜGEN</button>
+          </form>
+        </section>
+      </div>
+
       <footer id="shortcut-dock" class="shortcut-dock">
         <button id="shortcut-dock-toggle" class="shortcut-dock-toggle" type="button" aria-expanded="true" aria-controls="shortcut-grid" aria-label="Tastenkombinationen" data-i18n-aria-label="shortcutsAria">
           <span class="shortcut-dock-title" data-i18n="shortcuts">SHORTCUTS</span>
           <span id="shortcut-grid" class="shortcut-grid">
             <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>Alt</kbd><i>+</i><kbd>N</kbd><b data-i18n="shortcutApp">App</b></span>
+            <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>Alt</kbd><i>+</i><kbd>Q</kbd><b data-i18n="shortcutQuickCapture">Schnellaufnahme</b></span>
             <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>⇧</kbd><i>+</i><kbd>T</kbd><b data-i18n="shortcutTopic">Thema</b></span>
             <span><kbd data-i18n="controlKey">Strg</kbd><i>+</i><kbd>⇧</kbd><i>+</i><kbd>L</kbd><b data-i18n="shortcutList">Liste</b></span>
             <span><kbd>Alt</kbd><i>+</i><kbd>1–9</kbd><b data-i18n="shortcutTasks">Liste wählen</b></span>

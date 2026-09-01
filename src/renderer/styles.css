@@ -771,6 +771,39 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 .image-preview-actions { display: flex; justify-content: flex-end; }
 .image-preview-remove { font-size: calc(9px * var(--text-scale)); }
 
+.quick-capture-overlay {
+  position: absolute;
+  z-index: 32;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: #17171773;
+  backdrop-filter: blur(2px);
+  animation: overlay-fade-in var(--motion-normal) ease both;
+}
+.quick-capture-card {
+  width: min(100%, 400px);
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  color: #171717;
+  background: #fffdf5;
+  border: 3px solid #171717;
+  box-shadow: 8px 8px 0 #8ec7ff;
+  transform: rotate(.4deg);
+  animation: note-rise-in var(--motion-slow) var(--motion-ease) both;
+}
+.quick-capture-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.quick-capture-card .composer-label { margin: 0 0 3px; }
+.quick-capture-card h2 { margin: 0; font-size: calc(17px * var(--text-scale)); }
+#quick-capture-form { display: grid; gap: 11px; }
+#quick-capture-form label { display: grid; gap: 4px; color: #514b40; font-family: "Courier New", monospace; font-size: calc(9px * var(--text-scale)); font-weight: 900; letter-spacing: .04em; }
+#quick-capture-form select, #quick-capture-form input { min-width: 0; border: 2px solid #171717; border-radius: 0; padding: 9px 10px; color: #171717; background: #fffdf5; font: inherit; font-size: calc(12px * var(--text-scale)); }
+#quick-capture-form select:focus-visible, #quick-capture-form input:focus-visible { outline: 3px solid #8ec7ff; outline-offset: 1px; }
+#quick-capture-submit { justify-self: end; }
+#quick-capture-empty { margin: 0; color: #b82923; font-family: "Courier New", monospace; font-size: calc(10px * var(--text-scale)); font-weight: 900; }
+
 .shortcut-dock {
   position: absolute;
   z-index: 4;
@@ -925,6 +958,10 @@ html[data-theme="dark"] .image-preview-card { color: #d7d1c5; background: #18222
 html[data-theme="dark"] .image-preview-close { color: #171717; }
 html[data-theme="dark"] #task-image-preview { border-color: #7f909c; background: #111a22; }
 html[data-theme="dark"] #image-preview-name { color: #b4bec3; }
+html[data-theme="dark"] .quick-capture-card { color: #d7d1c5; background: #18222d; border-color: #d7d1c5; box-shadow: 8px 8px 0 #8ec7ff; }
+html[data-theme="dark"] .quick-capture-card .delete-button { color: #f4efe3; }
+html[data-theme="dark"] #quick-capture-form label { color: #b4bec3; }
+html[data-theme="dark"] #quick-capture-form select, html[data-theme="dark"] #quick-capture-form input { color: #f4efe3; background: #111a22; border-color: #7f909c; }
 html[data-theme="dark"] .item-description,
 html[data-theme="dark"] .substep-item { background: #111a22; border-color: #7f909c; }
 html[data-theme="dark"] .priority-sticker.priority-none { color: #f4efe3; background: transparent; border-color: #7f909c; }

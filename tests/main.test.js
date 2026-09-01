@@ -22,7 +22,7 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   };
   app.getPath = () => userData;
   app.exit = (code) => { app.exitCode = code; };
-  app.getVersion = () => '0.2.2';
+  app.getVersion = () => '0.2.3';
   app.getLoginItemSettings = () => ({ openAtLogin: Boolean(app.loginSettings?.openAtLogin) });
   app.setLoginItemSettings = (settings) => { app.loginSettings = settings; };
 
@@ -115,6 +115,10 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   assert.equal(panel.focused, true);
   registered['CommandOrControl+Alt+N']();
   assert.equal(panel.visible, false);
+  registered['CommandOrControl+Alt+Q']();
+  assert.equal(panel.visible, true);
+  assert.equal(panel.focused, true);
+  assert.ok(panel.webContents.messages.some(([channel]) => channel === 'quick-capture:open'));
   tray.emit('click');
   tray.emit('double-click');
   assert.equal(panel.visible, true);
@@ -184,7 +188,7 @@ test('main process wires panel, tray, persistence, settings and lifecycle events
   assert.equal(panel.visible, false);
 
   assert.deepEqual(tray.menu.map((item) => item.type || item.label), ['Open Edge Notes', 'separator', 'Exit']);
-  assert.equal(handlers.get('app:version')(), '0.2.2');
+  assert.equal(handlers.get('app:version')(), '0.2.3');
   assert.equal(
     handlers.get('app:install-path')(),
     path.dirname(process.env.PORTABLE_EXECUTABLE_FILE || process.execPath),

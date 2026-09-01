@@ -32,7 +32,7 @@ async function capturePage(file, outputName, width, height, preparePage) {
   }
   await window.webContents.executeJavaScript('document.fonts.ready');
   window.webContents.invalidate();
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 300));
   const image = await window.webContents.capturePage();
   fs.writeFileSync(path.join(imagesDirectory, outputName), image.toPNG());
   window.destroy();
@@ -53,6 +53,21 @@ app.once('ready', async () => {
         const input = document.querySelector('#search-input');
         input.value = 'README';
         input.dispatchEvent(new Event('input', { bubbles: true }));
+      })()`,
+    );
+    await capturePage(
+      'index.html',
+      'randnotizen-quick-capture.png',
+      520,
+      700,
+      `(() => {
+        const overlay = document.querySelector('#quick-capture-overlay');
+        const list = document.querySelector('#quick-capture-list');
+        list.append(new Option('Projektstart · Heute', 'list-today'));
+        list.append(new Option('Projektstart · Release', 'list-release'));
+        document.querySelector('#quick-capture-input').value = 'Release-Notizen prüfen';
+        overlay.hidden = false;
+        document.querySelector('#quick-capture-input').focus();
       })()`,
     );
     await capturePage(

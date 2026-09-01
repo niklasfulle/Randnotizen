@@ -8,6 +8,12 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 
 ![Randnotizen Live-Suche](docs/images/randnotizen-search.png)
 
+![Randnotizen Schnellaufnahme](docs/images/randnotizen-quick-capture.png)
+
+## Neu in 0.2.3
+
+- Die Schnellaufnahme öffnet per globalem Shortcut einen kompakten Dialog: Ziel-Liste wählen, Aufgabe eintippen, Enter drücken.
+
 ## Neu in 0.2.2
 
 - Bildanhänge bleiben klein an der Aufgabe und öffnen sich erst als Vorschau; das Entfernen erfolgt direkt in dieser Vorschau.
@@ -43,6 +49,7 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 - Kurze, aufeinander abgestimmte Animationen für Programmstart, Dialoge und neue Inhalte
 - Rücksicht auf die Windows-Einstellung zum Reduzieren von Animationen
 - Windows-Infobereich, globaler Hotkey und eigenes Anwendungsicon
+- Schnellaufnahme für neue Aufgaben in jeder vorhandenen Liste
 - Schutz vor mehreren gleichzeitig gestarteten Instanzen
 - Transaktionale lokale SQLite-Speicherung ohne Benutzerkonto oder Cloud-Zwang
 
@@ -51,6 +58,7 @@ Randnotizen verbindet Themen, Checklisten und Fortschrittsanzeigen mit einer ver
 | Tastenkombination | Aktion |
 | --- | --- |
 | `Strg + Alt + N` | Ein-/ausblenden; bei sichtbarer App ohne Fokus den Fokus zurückholen |
+| `Strg + Alt + Q` | Schnellaufnahme öffnen und eine Aufgabe in eine wählbare Liste eintragen |
 | `Strg + Umschalt + T` | Eingabefeld für ein neues Thema fokussieren |
 | `Strg + Umschalt + L` | Eingabefeld für eine neue Liste fokussieren |
 | `Strg + F` | Suche fokussieren und Suchtext markieren |
@@ -168,7 +176,7 @@ Coverage-Bericht inklusive LCOV-Datei für SonarQube erzeugen:
 npm run test:coverage
 ```
 
-Aktueller Stand von Version 0.2.2:
+Aktueller Stand von Version 0.2.3:
 
 | Messwert | Abdeckung |
 | --- | ---: |
@@ -177,7 +185,7 @@ Aktueller Stand von Version 0.2.2:
 | Funktionen | 98,00 % |
 
 Der HTML-/LCOV-Bericht wird unter `coverage/` erzeugt. SonarQube liest `coverage/lcov.info` über die Konfiguration in `sonar-project.properties` ein.
-Aktuell decken 25 automatisierte Tests Renderer, Hauptprozess, Live-Suche inklusive Tastaturnavigation, Fälligkeiten, Hotkeys, Backup/Restore, Papierkorb, Sortierung einschließlich vollständiger Listen, Archiv, Prioritäten, Animationstrigger, Layout, eingebettete Fonts, Icons, Übersetzungen und SQLite-Migration ab. Ein zusätzlicher nativer Electron-Test bildet die vollständige Drag-and-drop-Ereigniskette einer Liste ab.
+Aktuell decken 26 automatisierte Tests Renderer, Hauptprozess, Schnellaufnahme, Live-Suche inklusive Tastaturnavigation, Fälligkeiten, Hotkeys, Backup/Restore, Papierkorb, Sortierung einschließlich vollständiger Listen, Archiv, Prioritäten, Animationstrigger, Layout, eingebettete Fonts, Icons, Übersetzungen und SQLite-Migration ab. Ein zusätzlicher nativer Electron-Test bildet die vollständige Drag-and-drop-Ereigniskette einer Liste ab.
 
 Die nativen Hotkey-, Drag-and-drop- und Layout-Prüfungen lassen sich separat starten:
 
@@ -248,6 +256,6 @@ Die Einstellungen bleiben bewusst in der kleinen, menschenlesbaren `settings.jso
 
 ## Version und Urheberrecht
 
-Aktuelle Version: **0.2.2**
+Aktuelle Version: **0.2.3**
 
 **© 2026 Niklas Fulle**

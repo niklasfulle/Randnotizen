@@ -50,7 +50,7 @@ async function bootRenderer(loadedWorkspace) {
       autostartUpdates.push(enabled);
       return enabled;
     },
-    getVersion: async () => '0.2.2',
+    getVersion: async () => '0.2.3',
     getInstallPath: async () => 'C:\\Programme\\Randnotizen',
     chooseTaskImage: async () => ({
       canceled: false,
@@ -60,6 +60,7 @@ async function bootRenderer(loadedWorkspace) {
     onPanelState: (callback) => { callbacks.panelState = callback; },
     onLanguageChanged: (callback) => { callbacks.languageChanged = callback; },
     onDesignChanged: (callback) => { callbacks.designChanged = callback; },
+    onQuickCapture: (callback) => { callbacks.quickCapture = callback; },
   };
 
   globalThis.document = dom.window.document;
@@ -98,6 +99,34 @@ test.afterEach(() => {
   delete globalThis.RandnotizenI18n;
   delete globalThis.notesApp;
   delete globalThis.requestAnimationFrame;
+});
+
+test('renderer adds a task to the selected list through quick capture', async () => {
+  const { dom, saved, callbacks } = await bootRenderer({
+    version: 6,
+    activeTopicId: 'topic-a',
+    topics: [
+      { id: 'topic-a', title: 'Arbeit', lists: [{ id: 'list-a', title: 'Heute', items: [] }] },
+      { id: 'topic-b', title: 'Privat', lists: [{ id: 'list-b', title: 'Einkaufen', items: [] }] },
+    ],
+  });
+  const { document } = dom.window;
+
+  callbacks.quickCapture();
+  assert.equal(document.querySelector('#quick-capture-overlay').hidden, false);
+  assert.equal(document.querySelector('#quick-capture-list').options.length, 2);
+  assert.equal(document.activeElement, document.querySelector('#quick-capture-input'));
+
+  document.querySelector('#quick-capture-list').value = 'list-b';
+  document.querySelector('#quick-capture-input').value = 'Milch kaufen';
+  document.querySelector('#quick-capture-form').dispatchEvent(new dom.window.Event('submit', {
+    bubbles: true,
+    cancelable: true,
+  }));
+  await flush();
+
+  assert.equal(document.querySelector('#quick-capture-overlay').hidden, true);
+  assert.equal(saved.at(-1).topics[1].lists[0].items[0].text, 'Milch kaufen');
 });
 
 test('renderer supports topics, lists, tasks, shortcuts, settings and confirmations', async () => {
@@ -259,7 +288,7 @@ test('renderer supports topics, lists, tasks, shortcuts, settings and confirmati
   document.querySelectorAll('.settings-group')[2].open = true;
   assert.equal(document.querySelectorAll('.settings-group')[2].open, true);
   assert.equal(document.querySelector('#save-status').tagName, 'OUTPUT');
-  assert.equal(document.querySelector('#version-label').textContent, '0.2.2');
+  assert.equal(document.querySelector('#version-label').textContent, '0.2.3');
   assert.equal(document.querySelector('#install-path-label').textContent, 'C:\\Programme\\Randnotizen');
   assert.equal(document.querySelector('#settings-form button[type="submit"]').textContent, 'SPEICHERN');
   assert.equal(

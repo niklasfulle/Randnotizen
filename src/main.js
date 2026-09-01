@@ -10,6 +10,7 @@ const { createWorkspaceStore } = require('./workspace-store');
 
 const PANEL_WIDTH = 520;
 const HOTKEY = 'CommandOrControl+Alt+N';
+const QUICK_CAPTURE_HOTKEY = 'CommandOrControl+Alt+Q';
 const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
 const TASK_IMAGE_MIME_TYPES = {
   '.png': 'image/png',
@@ -103,6 +104,11 @@ function togglePanel() {
 function showPanel() {
   setPanelState(true);
   panel.focus();
+}
+
+function openQuickCapture() {
+  showPanel();
+  panel.webContents.send('quick-capture:open');
 }
 
 function workspaceFile() {
@@ -293,6 +299,7 @@ function initializeApplication() {
   createPanel();
   createTray();
   globalShortcut.register(HOTKEY, togglePanel);
+  globalShortcut.register(QUICK_CAPTURE_HOTKEY, openQuickCapture);
 
   ipcMain.handle('workspace:load', loadWorkspace);
   ipcMain.handle('workspace:save', saveWorkspace);

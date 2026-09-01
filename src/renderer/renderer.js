@@ -54,6 +54,13 @@ const themeColor = document.querySelector('#theme-color');
 const shortcutDock = document.querySelector('#shortcut-dock');
 const shortcutDockToggle = document.querySelector('#shortcut-dock-toggle');
 const panelElement = document.querySelector('.panel');
+const quickCaptureOverlay = document.querySelector('#quick-capture-overlay');
+const quickCaptureForm = document.querySelector('#quick-capture-form');
+const quickCaptureList = document.querySelector('#quick-capture-list');
+const quickCaptureInput = document.querySelector('#quick-capture-input');
+const quickCaptureEmpty = document.querySelector('#quick-capture-empty');
+const quickCaptureSubmit = document.querySelector('#quick-capture-submit');
+const closeQuickCaptureButton = document.querySelector('#close-quick-capture-button');
 
 const {
   normalizeLanguage,
@@ -394,6 +401,30 @@ function migrateWorkspace(loaded) {
 
 function activeTopic() {
   return workspace.topics.find((topic) => topic.id === workspace.activeTopicId) || null;
+}
+
+function openQuickCapture() {
+  quickCaptureList.replaceChildren();
+  const lists = workspace.topics.flatMap((topic) => topic.lists.map((list) => ({ topic, list })));
+  for (const { topic, list } of lists) {
+    const option = document.createElement('option');
+    option.value = list.id;
+    option.textContent = `${topic.title} · ${list.title}`;
+    quickCaptureList.append(option);
+  }
+  quickCaptureList.value = selectedShortcutListId || activeTopic()?.lists[0]?.id || '';
+  const empty = !lists.length;
+  quickCaptureEmpty.hidden = !empty;
+  quickCaptureList.disabled = empty;
+  quickCaptureInput.disabled = empty;
+  quickCaptureSubmit.disabled = empty;
+  quickCaptureInput.value = '';
+  quickCaptureOverlay.hidden = false;
+  requestAnimationFrame(() => (empty ? closeQuickCaptureButton : quickCaptureInput).focus());
+}
+
+function closeQuickCapture() {
+  quickCaptureOverlay.hidden = true;
 }
 
 function findList(listId) {
@@ -1280,6 +1311,22 @@ confirmOverlay.addEventListener('click', (event) => {
   if (event.target === confirmOverlay) finishConfirmation(false);
 });
 closeImagePreviewButton.addEventListener('click', closeImagePreview);
+closeQuickCaptureButton.addEventListener('click', closeQuickCapture);
+quickCaptureOverlay.addEventListener('click', (event) => {
+  if (event.target === quickCaptureOverlay) closeQuickCapture();
+});
+quickCaptureForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const list = findList(quickCaptureList.value);
+  const text = quickCaptureInput.value.trim();
+  if (!list || !text) return quickCaptureInput.focus();
+  const item = { id: createId(), text, completed: false, details: '', priority: 'none', archived: false, image: null, dueDate: '', steps: [] };
+  list.items.push(item);
+  renderMotion = { type: 'item-add', id: item.id };
+  await persist();
+  closeQuickCapture();
+  render();
+});
 removePreviewImageButton.addEventListener('click', async () => {
   if (!previewedItem || previewedItem.completed) return;
   previewedItem.image = null;
@@ -1295,6 +1342,7 @@ document.addEventListener('keydown', (event) => {
   if (!confirmOverlay.hidden) finishConfirmation(false);
   else if (!settingsOverlay.hidden) closeSettingsPopover();
   else if (!imageOverlay.hidden) closeImagePreview();
+  else if (!quickCaptureOverlay.hidden) closeQuickCapture();
 });
 
 function matchesModifiers(event, { control = false, alt = false, shift = false }) {
@@ -1397,7 +1445,7 @@ document.addEventListener('keydown', (event) => {
     undoLastDelete();
     return;
   }
-  if (!confirmOverlay.hidden || !settingsOverlay.hidden || !imageOverlay.hidden) return;
+  if (!confirmOverlay.hidden || !settingsOverlay.hidden || !imageOverlay.hidden || !quickCaptureOverlay.hidden) return;
   if (handleSearchNavigation(event)) return;
   if (handleTaskNumberShortcut(event)) return;
   if (handleTaskNavigationShortcut(event)) return;
@@ -1442,6 +1490,7 @@ globalThis.notesApp.onLanguageChanged((language) => {
   render();
 });
 globalThis.notesApp.onDesignChanged(applyDesign);
+globalThis.notesApp.onQuickCapture(openQuickCapture);
 
 async function initialize() {
   updateTextScale();

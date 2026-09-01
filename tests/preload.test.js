@@ -78,9 +78,11 @@ test('preload exposes the complete renderer API and forwards IPC events', async 
   exposedApi.onPanelState((value) => received.push(value));
   exposedApi.onLanguageChanged((value) => received.push(value));
   exposedApi.onDesignChanged((value) => received.push(value));
+  exposedApi.onQuickCapture(() => received.push('quick-capture'));
   listeners.get('panel-state')({}, { open: true });
   listeners.get('language:changed')({}, 'en');
   listeners.get('design:changed')({}, 'dark');
+  listeners.get('quick-capture:open')({});
 
-  assert.deepEqual(received, [{ open: true }, 'en', 'dark']);
+  assert.deepEqual(received, [{ open: true }, 'en', 'dark', 'quick-capture']);
 });

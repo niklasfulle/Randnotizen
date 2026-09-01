@@ -18,4 +18,5 @@ contextBridge.exposeInMainWorld('notesApp', {
   onPanelState: (callback) => ipcRenderer.on('panel-state', (_event, state) => callback(state)),
   onLanguageChanged: (callback) => ipcRenderer.on('language:changed', (_event, language) => callback(language)),
   onDesignChanged: (callback) => ipcRenderer.on('design:changed', (_event, design) => callback(design)),
+  onQuickCapture: (callback) => ipcRenderer.on('quick-capture:open', () => callback()),
 });
